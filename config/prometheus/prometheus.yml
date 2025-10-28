@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'fluentbit'
+    static_configs:
+      - targets: ['sentinel-kit-fluentbit-server:2020']
+    metrics_path: /api/v1/metrics/prometheus

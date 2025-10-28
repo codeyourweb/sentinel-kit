@@ -1,0 +1,30 @@
+:443, localhost {
+    @not_api not path /api/*
+
+    log /api/* {
+        output file /var/log/caddy/backend.log
+    }
+
+    log @not_api {
+        output file /var/log/caddy/frontend.log
+    }
+
+    handle /api/* {
+        reverse_proxy sentinel-kit-backend-app:8000
+    }
+
+    handle /bundles/* {
+        reverse_proxy sentinel-kit-backend-app:8000
+    }
+
+    handle /_wdt/* {
+        reverse_proxy sentinel-kit-backend-app:8000
+    }
+
+    handle /_profiler/* {
+        reverse_proxy sentinel-kit-backend-app:8000
+    }    
+    handle @not_api {
+        reverse_proxy sentinel-kit-frontend-app:3000
+    }
+}
