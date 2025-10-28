@@ -1,0 +1,189 @@
+services:
+  sentinel-kit-frontend-app:
+    container_name: sentinel-kit-frontend-app
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./sentinel-kit_server_frontend:/app
+    command: sh -c "npm install && npm run dev -- --host '0.0.0.0' --port 3000"
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    networks:
+      - sentinel-kit-network
+
+  sentinel-kit-backend-app:
+    container_name: sentinel-kit-backend-app
+    build:
+      context: .
+      dockerfile: config/docker-config/Dockerfile.backend
+    restart: unless-stopped
+    working_dir: /var/www/html
+    entrypoint: /usr/local/bin/backend-entrypoint.sh
+    volumes:
+      - ./config/docker-config/backend-entrypoint.sh:/usr/local/bin/backend-entrypoint.sh:ro
+      - ./sentinel-kit_server_backend:/var/www/html:delegated
+      - ./sentinel-kit_server_backend/public:/var/www/html/public:delegated
+      - sentinel-kit_server_backend_vendor_cache:/var/www/html/vendor
+      - sentinel-kit_server_backend_var_cache:/var/www/html/var
+    stdin_open: true
+    tty: true
+    command: >
+      sh -c "symfony server:ca:install &&
+             rm -rf /var/www/html/var/cache &&
+             rm -rf /var/www/html/public/bundles &&
+             composer install && 
+             rm /var/www/html/config/jwt/*.pem &&
+             php bin/console lexik:jwt:generate-keypair --overwrite && 
+             symfony server:start --allow-http --port=8000 --listen-ip='0.0.0.0'"
+    networks:
+      - sentinel-kit-network
+    depends_on:
+      - sentinel-kit-mysql-db
+
+  sentinel-kit-fluentbit-server:
+    container_name: sentinel-kit-fluentbit-server
+    image: fluent/fluent-bit:latest
+    restart: unless-stopped
+    volumes:
+      - ./config/fluentbit_server/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./config/fluentbit_server/parsers.conf:/fluent-bit/etc/parsers.conf
+      - ./data/log_ingest_data:/var/log:ro
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    networks:
+      - sentinel-kit-network
+    depends_on:
+      - sentinel-kit-elasticsearch-db
+
+  sentinel-kit-ftp-server:
+    container_name: sentinel-kit-ftp-server
+    image: atmoz/sftp
+    restart: unless-stopped
+    command: sentinel-kit_ftp_user:sentinel-kit_ftp_passwd:1001
+    ports:
+      - "2222:22"
+    volumes:
+      - ./data/ftp_data:/home/sentinel-kit_ftp_user/uploads
+    networks:
+      - sentinel-kit-network
+    working_dir: /home/sentinel-kit_ftp_user/uploads
+
+  sentinel-kit-mysql-db:
+    container_name: sentinel-kit-mysql-db
+    image: mysql:9.4.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: sentinel-kit_r00tp4ssw0rd
+      MYSQL_DATABASE: sentinel-kit_db
+      MYSQL_USER: sentinel-kit_user
+      MYSQL_PASSWORD: sentinel-kit_passwd
+    volumes:
+      - ./data/mysql_data:/var/lib/mysql
+    networks:
+      - sentinel-kit-network
+
+  sentinel-kit-caddy-server:
+    image: caddy:2-alpine
+    container_name: sentinel-kit-caddy-server
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/caddy_server/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - sentinel-kit-network
+    depends_on:
+      - sentinel-kit-frontend-app
+      - sentinel-kit-backend-app
+      - sentinel-kit-mysql-db
+
+  sentinel-kit-elasticsearch-db:
+    image: elasticsearch:9.2.0
+    container_name: sentinel-kit-elasticsearch-db
+    environment:
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms4096m -Xmx4096m"
+      - xpack.security.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    networks:
+      - sentinel-kit-network
+  
+  sentinel-kit-phpmyadmin-utils:
+    container_name: sentinel-kit-phpmyadmin-utils
+    image: phpmyadmin/phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: sentinel-kit-mysql-db
+      PMA_PORT: 3306
+    ports:
+      - "8080:80"
+    networks:
+      - sentinel-kit-network
+    depends_on:
+      - sentinel-kit-mysql-db
+      - sentinel-kit-elasticsearch-db
+      - sentinel-kit-fluentbit-server
+
+  sentinel-kit-kibana-utils:
+    container_name: sentinel-kit-kibana-utils
+    image: kibana:9.2.0
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      xpack.security.enabled: false
+    ports:
+      - 5601:5601
+    networks:
+      - sentinel-kit-network
+    depends_on:
+      - sentinel-kit-elasticsearch-db
+
+  sentinel-kit-prometheus-utils:
+    container_name: sentinel-kit-prometheus-utils
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - sentinel-kit-network
+    depends_on:
+      - sentinel-kit-fluentbit-server
+
+  sentinel-kit-grafana-utils:
+    container_name: sentinel-kit-grafana-utils
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=sentinel-kit_grafana_admin
+      - GF_SECURITY_ADMIN_PASSWORD=sentinel-kit_grafana_password
+    ports:
+      - "3000:3000"
+    networks:
+      - sentinel-kit-network
+    depends_on:
+      - sentinel-kit-prometheus-utils
+      - sentinel-kit-elasticsearch-db
+
+networks:
+  sentinel-kit-network:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
+  sentinel-kit_server_backend_vendor_cache:
+  sentinel-kit_server_backend_var_cache:
+  sentinel-kit_server_backend_public:

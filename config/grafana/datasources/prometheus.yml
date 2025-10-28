@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus-Fluentbit
+    type: prometheus
+    url: http://sentinel-kit-prometheus-utils:9090
+    access: proxy
+    isDefault: true
+    version: 1
+    editable: true
+    orgId: 1
