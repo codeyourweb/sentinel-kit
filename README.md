@@ -1,5 +1,5 @@
-![Sentinel Kit](./.github/img/sentinel-kit_logo.png)
-# 🛡️ Sentinel Kit: The Simplified Platform for Incident Response (DFIR/SOC)
+![Sentinel Kit](docs/img/sentinel-kit_logo.png)
+# 🛡️ Sentinel Kit: The Simplified Platform for Incident Response (SOC & DFIR)
 
 ## WARNING: This project is currently in an early stage of development. Not all components have been ported to this repository, and the features are not yet stable enough for production use. 
 ---
@@ -16,7 +16,7 @@ Sentinel Kit is an all-in-one toolkit that covers the entire security incident l
 
 * **Log Collection & Parsing (SIEM Lite)**: Uses **Fluent Bit** for data ingestion and **Elasticsearch** for storage and indexing.
 * **Advanced Analysis & Triage**: Planned integration of **Sigma** rules for log-based detection and **YARA** for suspicious file triage (via upload mechanisms).
-* **Detection and Response (EDR)**: A dedicated agent (integrating into the ecosystem) is planned to provide real-time detection and response functionalities.
+* **Detection and Response (EDR)**: A dedicated agent (integrating into the ecosystem) provide real-time detection and response functionalities. In addition, this optional agent can act as a collection element to forward logs from your workstations to the sentinel-kit server.
 * **Secure Uploads**: Provides a dedicated **SFTP** server for uploading evidence, logs, or suspicious files.
 * **Comprehensive Visualization**: Monitoring dashboards via **Kibana** and **Grafana/Prometheus**.
 
@@ -40,7 +40,17 @@ This project is designed to be deployed in minutes using Docker Compose.
     cd sentinel-kit
     ```
 
-2.  **Launch the Stack:**
+2. **Set the following DNS entry (in hosts file if you are running it locally):**
+```bash
+# OS host file
+127.0.0.1   sentinel-kit.local
+127.0.0.1   backend.sentinel-kit.local
+127.0.0.1   phpmyadmin.sentinel-kit.local
+127.0.0.1   kibana.sentinel-kit.local
+127.0.0.1   grafana.sentinel-kit.local
+```
+
+3.  **Launch the Stack:**
     ```bash
     docker-compose up -d
     ```
@@ -60,10 +70,11 @@ Once the stack is running, you can access the interfaces via the default ports e
 
 | Service | Role | Default Access |
 | :--- | :--- | :--- |
-| **Web Interface** (Frontend) | Access to the main application | `http://localhost:80` or `https://localhost:443` (via Caddy) |
-| **Kibana** | Exploration and visualization of Elastic logs | `http://localhost:5601` |
-| **Grafana** | Monitoring dashboards | `http://localhost:3000` |
-| **phpMyAdmin** | MySQL database management | `http://localhost:8080` |
+| **Web Interface** (Admin frontend) | Access to the admin application | `https://sentinel-kit.local` |
+| **Web API**  | Used for clients<->server communications and admin actions over the web interface | `https://backend.sentinel-kit.local` |
+| **Kibana** | Exploration and visualization of Elastic logs | `http://kibana.sentinel-kit.local` |
+| **Grafana** | Monitoring dashboards | `http://grafana.sentinel-kit.local` |
+| **phpMyAdmin** | MySQL database management | `http://phpmyadmin.sentinel-kit.local` |
 | **SFTP Server** | Secure file/evidence upload | Port `2222` |
 
 ### Default Credentials (Utilities)
@@ -74,39 +85,23 @@ Once the stack is running, you can access the interfaces via the default ports e
 | **MySQL (DB)** | `sentinel-kit_user` | `sentinel-kit_passwd` |
 | **SFTP** | `sentinel-kit_ftp_user` | `sentinel-kit_ftp_passwd` |
 
+All of this can be edited in `.env` file
+
 ---
 
 ## 🛠️ Technical Architecture (via `docker-compose.yml`)
 
 The architecture is modular and relies on the interconnection of several services via the **sentinel-kit-network** network.
-
-### Application Components
-
-* `sentinel-kit-frontend-app`: User Interface.
-* `sentinel-kit-backend-app`: Business logic, API, and data management (depends on MySQL).
-* `sentinel-kit-ftp-server`: Entry point for manual file collection (evidence, YARA/Sigma files).
-* `sentinel-kit-caddy-server`: Reverse proxy managing HTTP/HTTPS access (ports 80/443) and routing to the frontend and  backend.
-
-### Collection & Storage Components
-
-* `sentinel-kit-fluentbit-server`: Log collector (Ingestion on port `24224`) that sends data to Elasticsearch.
-* `sentinel-kit-elasticsearch-db`: Search and log storage engine.
-* `sentinel-kit-mysql-db`: Relational database (for the backend).
-
-### Utility Components (Monitoring & DB)
-
-* `sentinel-kit-kibana-utils`: Visualization of Elasticsearch data (log analysis).
-* `sentinel-kit-prometheus-utils`: Ingestion , parsing, and forwarding metrics collection.
-* `sentinel-kit-grafana-utils`: Metrics visualization (Prometheus) and potentially other data.
-* `sentinel-kit-phpmyadmin-utils`: Web interface for MySQL management (dev / admin).
+![Sentinel-Kit architecture](docs/img/sentinel-kit_network_flow.png)
 
 ## ⚙️ Configuration
 
 Main configurations are located in the `config/` folder: (edit these elements only if you know what you are doing 😊)
 
-* `config/fluentbit_server`: Fluent Bit configuration files (inputs, filters, outputs to Elasticsearch).
 * `config/caddy_server`: Reverse proxy that serve front and back-end web applications
+* `config/certificates`: Contains TLS certification chains for elasticstack, caddy and backend JWT
 * `config/docker-config`: Server stack configuration (dockerfile, entrypoints...).
+* `config/fluentbit_server`: Fluent Bit configuration files (inputs, filters, outputs to Elasticsearch).
 * `config/grafana`: Grafana initial setup (datasources and dashboards).
 * `config/prometheus/prometheus.yml`: Prometheus monitoring targets configuration.
 * `config/sigma_ruleset`: sigma rules used on elasticsearch ingested logs
@@ -116,8 +111,10 @@ Main configurations are located in the `config/` folder: (edit these elements on
 
 Persistent data are located in the `data/` folder:
 
+* `data/caddy_logs`: Store the caddy server access & error logs
 * `data/ftp_data`: Store file uploaded on the SFTP server
 * `data/grafana`: Contains a persistence of your grafana profile if you want to make your own dashboard and customizations
+* `data/kibana`: Kibana user customizations
 * `data/log_ingest_data`: Is designed to forward logs if you don't want to use fluentbit HTTP forwarder
 * `data/mysql_data`: Constains a persistence of the web backend database
 * `data/yara_triage_data`: is used to automatically scan any file placed in this folder  
@@ -130,3 +127,14 @@ To stop and remove the containers, networks, and volumes created by Docker Compo
 
 ```bash
 docker-compose down -v
+```
+
+If you want to erase all user data:
+* remove the __content__ of every folder inside `data/`
+* remove the __content__ of `config/certificates/` in caddy_server, elasticsearch and jwt
+* remove the __content__ of `config/grafana`
+* finally, rebuild the stack with the following command:
+
+```bash
+docker-compose up --build --force-recreate
+```

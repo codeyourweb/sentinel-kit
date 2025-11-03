@@ -1,5 +1,5 @@
 <template>
-    <LoginOTPForm v-if="otpUrl" :post-auth-url="otpUrl" @postauth-success="handlePostAuthSuccess" />
+    <LoginOTPForm v-if="otpUrl" :post-auth-url="otpUrl" :otp-key="otpKey" @postauth-success="handlePostAuthSuccess" />
     <LoginPasswordForm v-else @preauth-success="handlePreAuthSuccess" />
 </template>
 
@@ -9,9 +9,11 @@ import LoginOTPForm from '../components/LoginOTPForm.vue';
 import LoginPasswordForm from '../components/LoginPasswordForm.vue';
 
 const otpUrl = ref(null);
+const otpKey = ref(null);
 
-const handlePreAuthSuccess = (postAuthUrl) => {
-    otpUrl.value = postAuthUrl;
+const handlePreAuthSuccess = (responseData) => {
+    otpUrl.value = responseData.postAuthUrl;
+    otpKey.value = responseData.otp_key;
 };
 
 const handlePostAuthSuccess = (token) => {

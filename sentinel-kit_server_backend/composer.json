@@ -79,6 +79,9 @@
         "symfony/symfony": "*"
     },
     "extra": {
+         "runtime": {
+            "use_putenv": true
+        },
         "symfony": {
             "allow-contrib": false,
             "require": "7.3.*"

@@ -57,7 +57,7 @@ const handleLogin = () => {
             response.json().then(data => {
                 if(data.postAuthUrl){
                     console.log('Pre-auth successful');
-                    emit('preauth-success', data.postAuthUrl);
+                    emit('preauth-success', {postAuthUrl: data.postAuthUrl, otp_key: data.otp_key});
                 }
             });
         }

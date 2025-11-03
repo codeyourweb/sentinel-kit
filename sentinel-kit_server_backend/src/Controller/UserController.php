@@ -76,8 +76,15 @@ class UserController extends AbstractController
             $this->entityManager->persist($jwt);
             $this->entityManager->flush();
         }
+        
+        $qrCodeContent = '';
+        if($user->getUpdatedOn() == null) {
+            $qrCodeContent = $this->urlGenerator->generate('qr_code_totp_generator', ['qrCodeContent' => base64_encode($this->googleAuthenticator->getQRContent($user))], UrlGeneratorInterface::ABSOLUTE_URL);
+        }
 
-        return new JsonResponse(['postAuthUrl' => $this->urlGenerator->generate('user_post_auth', ['uniqueId' => $jwt->getUniqueId()], UrlGeneratorInterface::ABSOLUTE_URL)], Response::HTTP_OK);
+        return new JsonResponse(['postAuthUrl' => $this->urlGenerator->generate('user_post_auth', ['uniqueId' => $jwt->getUniqueId()], UrlGeneratorInterface::ABSOLUTE_URL),
+                                 'otp_key' => $qrCodeContent], Response::HTTP_OK
+        );
     }
 
     #[Route('/api/login_post_auth/{uniqueId}', name: 'user_post_auth', methods: ['POST'])]
@@ -105,6 +112,8 @@ class UserController extends AbstractController
             return new JsonResponse(['error' => 'Invalid request'], Response::HTTP_UNAUTHORIZED);
         }
 
+        $user->setUpdatedOn(new \DateTime());
+        $this->entityManager->persist($user);
         $this->entityManager->remove($jwt);
         $this->entityManager->flush();
 
