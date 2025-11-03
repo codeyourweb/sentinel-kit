@@ -1,30 +1,81 @@
-:443, localhost {
-    @not_api not path /api/*
+# TLS reverse proxy configuration
+{$SENTINELKIT_BACKEND_HOSTNAME}:443 {
+    tls internal
 
-    log /api/* {
+    log {
         output file /var/log/caddy/backend.log
+        format json
     }
 
-    log @not_api {
+    reverse_proxy sentinel-kit-app-backend:8000
+    encode zstd gzip
+}
+
+{$SENTINELKIT_FRONTEND_HOSTNAME}:443 {
+    tls internal
+    
+    log {
         output file /var/log/caddy/frontend.log
+        format json
     }
 
-    handle /api/* {
-        reverse_proxy sentinel-kit-backend-app:8000
+    reverse_proxy sentinel-kit-app-frontend:3000
+    encode zstd gzip
+}
+
+{$SENTINELKIT_PMA_HOSTNAME}:443 {
+    tls internal
+
+    log {
+        output file /var/log/caddy/phpmyadmin.log
+        format json
     }
 
-    handle /bundles/* {
-        reverse_proxy sentinel-kit-backend-app:8000
+    reverse_proxy sentinel-kit-utils-phpmyadmin:80
+    encode zstd gzip
+}
+
+{$SENTINELKIT_KIBANA_HOSTNAME}:443 {
+    tls internal
+    
+    log {
+        output file /var/log/caddy/kibana.log
+        format json
     }
 
-    handle /_wdt/* {
-        reverse_proxy sentinel-kit-backend-app:8000
+    reverse_proxy sentinel-kit-utils-kibana:5601
+    encode zstd gzip
+}
+
+{$SENTINELKIT_GRAFANA_HOSTNAME}:443 {
+    tls internal
+
+    log {
+        output file /var/log/caddy/grafana.log
+        format json
     }
 
-    handle /_profiler/* {
-        reverse_proxy sentinel-kit-backend-app:8000
-    }    
-    handle @not_api {
-        reverse_proxy sentinel-kit-frontend-app:3000
-    }
+    reverse_proxy sentinel-kit-utils-grafana:3000
+    encode zstd gzip
+}
+
+# HTTP to HTTPS redirection
+{$SENTINELKIT_BACKEND_HOSTNAME}:80 {
+    redir https://{$SENTINELKIT_BACKEND_HOSTNAME}{uri}
+}
+
+{$SENTINELKIT_FRONTEND_HOSTNAME}:80 {
+    redir https://{$SENTINELKIT_FRONTEND_HOSTNAME}{uri}
+}
+
+{$SENTINELKIT_PMA_HOSTNAME}:80 {
+    redir https://{$SENTINELKIT_PMA_HOSTNAME}{uri}
+}
+
+{$SENTINELKIT_KIBANA_HOSTNAME}:80 {
+    redir https://{$SENTINELKIT_KIBANA_HOSTNAME}{uri}
+}
+
+{$SENTINELKIT_GRAFANA_HOSTNAME}:80 {
+    redir https://{$SENTINELKIT_GRAFANA_HOSTNAME}{uri}
 }

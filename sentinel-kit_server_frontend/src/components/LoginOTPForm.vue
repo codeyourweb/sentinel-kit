@@ -1,6 +1,13 @@
 <template>
     <form class="login-form max-w-md mx-auto mt-20 p-6 bg-white rounded-lg shadow-md">
         <h2 class="text-2xl font-bold mb-4">Enter OTP</h2>
+        <div class ="mb-4" v-if="otpKey != ''">
+            <h2 class="text-lg font-semibold">First time login.</h2>
+            <p>Scan the QR code below with your authenticator app and fulfill the 6-digit OTP.</p>
+            <div class="flex items-center justify-center">
+                <img :src="otpKey" alt="OTP QR Code" class="object-center" />
+            </div>
+        </div>
         <div class="otp-inputs">
             <input type="text" id="otp0" class="input max-w-sm" :class="{ 'is-invalid': isInvalid }" maxlength="1" v-model="otp[0]" @input="focusNext(0)" @keydown.backspace="focusPrev(0)" />
             <input type="text" id="otp1" class="input max-w-sm" :class="{ 'is-invalid': isInvalid }" maxlength="1" v-model="otp[1]" @input="focusNext(1)" @keydown.backspace="focusPrev(1)" />
@@ -23,6 +30,10 @@ const otp = ref(['', '', '', '', '', '']);
 const emit = defineEmits(['postauth-success']);
 const props = defineProps({
     postAuthUrl: {
+        type: String,
+        required: true
+    },
+    otpKey: {
         type: String,
         required: true
     }

@@ -16,10 +16,10 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Scheb\TwoFactorBundle\Security\TwoFactor\Provider\Google\GoogleAuthenticatorInterface;
 
 #[AsCommand(
-    name: 'app:users:create',
-    description: 'Create a new user in the backend application',
+    name: 'app:users:renew-otp',
+    description: 'Renew OTP for a user in the backend application',
 )]
-class CreateUserCommand extends Command
+class UsersRenewOTPCommand extends Command
 {
 
     private EntityManagerInterface $entityManager;
@@ -39,54 +39,38 @@ class CreateUserCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('email', InputArgument::REQUIRED, 'Email of the user')
-            ->addArgument('password', InputArgument::REQUIRED, 'Password of the user')        ;
+            ->addArgument('email', InputArgument::REQUIRED, 'Email of the user');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $email = $input->getArgument('email');
-        $plainPassword = $input->getArgument('password');
 
-        $user = new User();
-        $user->setEmail($email);
-        $user->setRoles(['ROLE_USER']);
+        $userRepository = $this->entityManager->getRepository(User::class);
 
-        $hashedPassword = $this->passwordHasher->hashPassword(
-            $user,
-            $plainPassword
-        );
-        $user->setPassword($hashedPassword);
-     
+        $user = $userRepository->findOneBy(['email'=> $input->getArgument('email')]);
+        if (null === $user) {
+            $io->error('User not found.');
+            return Command::FAILURE;   
+        }
         $secret = $this->googleAuthenticator->generateSecret();
         $user->setGoogleAuthenticatorSecret(googleAuthenticatorSecret: $secret);
+        $user->setUpdatedOn(null);
 
-        try{
-            $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
-            if ($existingUser) {
-                $io->error('A user with this email already exists.');
-                return Command::FAILURE;
-            }
-        } catch (\Exception $e) {
-            $io->error('An error occurred while checking for existing user: ' . $e->getMessage());
-            return Command::FAILURE;
-        }
-
-        try{
+        try {
             $this->entityManager->persist($user);
             $this->entityManager->flush();
         } catch (\Exception $e) {
-            $io->error('An error occurred while creating the user: ' . $e->getMessage());
+            $io->error('An error occurred while resetting user OTP: ' . $e->getMessage());
             return Command::FAILURE;
         }
 
 
         $qrCodeContent = $this->googleAuthenticator->getQRContent($user);
         $io->newLine();
-        $io->success('User successfully created');
+        $io->success('User OTP reset successful.');
         $io->writeln('==============================');
-        $io->writeln(sprintf('email: %s', $email));
+        $io->writeln(sprintf('email: %s', $user->getEmail()));
         $io->writeln(sprintf('OTP authenticator URL: %s', $this->urlGenerator->generate('qr_code_totp_generator', ['qrCodeContent' => base64_encode($qrCodeContent)], UrlGeneratorInterface::ABSOLUTE_URL)));
         $io->writeln('==============================');
         $io->newLine();

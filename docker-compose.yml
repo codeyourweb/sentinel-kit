@@ -1,27 +1,38 @@
 services:
-  sentinel-kit-frontend-app:
-    container_name: sentinel-kit-frontend-app
+  sentinel-kit-app-frontend:
+    container_name: sentinel-kit-app-frontend
+    hostname: ${SENTINELKIT_FRONTEND_HOSTNAME}
     image: node:22-alpine
     working_dir: /app
+    environment:
+      - VITE_ALLOWED_HOSTS=.${SENTINELKIT_FRONTEND_HOSTNAME}
+      - VITE_API_BASE_URL=https://${SENTINELKIT_BACKEND_HOSTNAME}/api
     volumes:
       - ./sentinel-kit_server_frontend:/app
     command: sh -c "npm install && npm run dev -- --host '0.0.0.0' --port 3000"
     stdin_open: true
     tty: true
-    restart: unless-stopped
+    restart: on-failure
     networks:
       - sentinel-kit-network
 
-  sentinel-kit-backend-app:
-    container_name: sentinel-kit-backend-app
+  sentinel-kit-app-backend:
+    container_name: sentinel-kit-app-backend
+    hostname: ${SENTINELKIT_BACKEND_HOSTNAME}
     build:
       context: .
       dockerfile: config/docker-config/Dockerfile.backend
-    restart: unless-stopped
+    restart: on-failure
     working_dir: /var/www/html
     entrypoint: /usr/local/bin/backend-entrypoint.sh
+    environment:
+      - JWT_PASSPHRASE=${BACKEND_JWT_PASSPHRASE}
+      - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@sentinel-kit-db-mysql:3306/${MYSQL_DATABASE}?serverVersion=9.4.0&charset=utf8
+      - DATAMONITOR_SERVER_TOKEN=${SENTINELKIT_DATAMONITOR_SERVER_TOKEN}
+      - CORS_ALLOW_ORIGIN=https://${SENTINELKIT_FRONTEND_HOSTNAME}
     volumes:
       - ./config/docker-config/backend-entrypoint.sh:/usr/local/bin/backend-entrypoint.sh:ro
+      - ./config/certificates/jwt:/var/www/html/config/jwt
       - ./sentinel-kit_server_backend:/var/www/html:delegated
       - ./sentinel-kit_server_backend/public:/var/www/html/public:delegated
       - sentinel-kit_server_backend_vendor_cache:/var/www/html/vendor
@@ -33,157 +44,312 @@ services:
              rm -rf /var/www/html/var/cache &&
              rm -rf /var/www/html/public/bundles &&
              composer install && 
-             rm /var/www/html/config/jwt/*.pem &&
-             php bin/console lexik:jwt:generate-keypair --overwrite && 
              symfony server:start --allow-http --port=8000 --listen-ip='0.0.0.0'"
     networks:
       - sentinel-kit-network
     depends_on:
-      - sentinel-kit-mysql-db
+      - sentinel-kit-db-mysql
 
-  sentinel-kit-fluentbit-server:
-    container_name: sentinel-kit-fluentbit-server
+  sentinel-kit-server-fluentbit:
+    container_name: sentinel-kit-server-fluentbit
     image: fluent/fluent-bit:latest
-    restart: unless-stopped
+    restart: on-failure
     volumes:
       - ./config/fluentbit_server/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
       - ./config/fluentbit_server/parsers.conf:/fluent-bit/etc/parsers.conf
       - ./data/log_ingest_data:/var/log:ro
-    ports:
-      - "24224:24224"
-      - "24224:24224/udp"
     networks:
       - sentinel-kit-network
     depends_on:
-      - sentinel-kit-elasticsearch-db
+      - sentinel-kit-db-elasticsearch-es01
 
-  sentinel-kit-ftp-server:
-    container_name: sentinel-kit-ftp-server
+  sentinel-kit-server-sftp:
+    container_name: sentinel-kit-server-sftp
     image: atmoz/sftp
-    restart: unless-stopped
-    command: sentinel-kit_ftp_user:sentinel-kit_ftp_passwd:1001
+    restart: on-failure
+    command: ${SFTP_USER}:${SFTP_PASSWORD}:1001
     ports:
       - "2222:22"
     volumes:
-      - ./data/ftp_data:/home/sentinel-kit_ftp_user/uploads
+      - ./data/ftp_data:/home/${SFTP_USER}/uploads
     networks:
       - sentinel-kit-network
-    working_dir: /home/sentinel-kit_ftp_user/uploads
+    working_dir: /home/${SFTP_USER}/uploads
 
-  sentinel-kit-mysql-db:
-    container_name: sentinel-kit-mysql-db
+  sentinel-kit-db-mysql:
+    container_name: sentinel-kit-db-mysql
     image: mysql:9.4.0
-    restart: unless-stopped
+    restart: on-failure
     environment:
-      MYSQL_ROOT_PASSWORD: sentinel-kit_r00tp4ssw0rd
-      MYSQL_DATABASE: sentinel-kit_db
-      MYSQL_USER: sentinel-kit_user
-      MYSQL_PASSWORD: sentinel-kit_passwd
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - ./data/mysql_data:/var/lib/mysql
     networks:
       - sentinel-kit-network
 
-  sentinel-kit-caddy-server:
-    image: caddy:2-alpine
-    container_name: sentinel-kit-caddy-server
-    restart: unless-stopped
+  sentinel-kit-server-caddy:
+    image: caddy:2.10.2-alpine
+    container_name: sentinel-kit-server-caddy
+    restart: on-failure
+    environment:
+      - SENTINELKIT_FRONTEND_HOSTNAME=${SENTINELKIT_FRONTEND_HOSTNAME}
+      - SENTINELKIT_BACKEND_HOSTNAME=${SENTINELKIT_BACKEND_HOSTNAME}
+      - SENTINELKIT_PMA_HOSTNAME=${SENTINELKIT_PMA_HOSTNAME}
+      - SENTINELKIT_KIBANA_HOSTNAME=${SENTINELKIT_KIBANA_HOSTNAME}
+      - SENTINELKIT_GRAFANA_HOSTNAME=${SENTINELKIT_GRAFANA_HOSTNAME}
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./config/caddy_server/Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
+      - ./config/certificates/caddy_server:/data/caddy/pki/authorities/local
+      - ./data/caddy_logs:/var/log/caddy
+      - sentinel-kit_server_caddy_data:/data
+      - sentinel-kit_server_caddy_config:/config
     networks:
       - sentinel-kit-network
     depends_on:
-      - sentinel-kit-frontend-app
-      - sentinel-kit-backend-app
-      - sentinel-kit-mysql-db
+      - sentinel-kit-app-frontend
+      - sentinel-kit-app-backend
+      - sentinel-kit-db-mysql
 
-  sentinel-kit-elasticsearch-db:
-    image: elasticsearch:9.2.0
-    container_name: sentinel-kit-elasticsearch-db
+  sentinel-kit-db-elasticsearch-setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSTACK_VERSION}
+    container_name: sentinel-kit-db-elasticsearch-setup
+    restart: on-failure
+    volumes:
+      - ./config/certificates/elasticsearch:/usr/share/elasticsearch/config/certs
+    user: "0"
+    command: >
+      bash -c '
+        if [ x${ELASTICSEARCH_PASSWORD} == x ]; then
+          echo "Set the ELASTICSEARCH_PASSWORD environment variable in the .env file";
+          exit 1;
+        fi;
+        if [ ! -f config/certs/ca.zip ]; then
+          echo "Creating CA";
+          bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
+          unzip config/certs/ca.zip -d config/certs;
+        fi;
+        if [ ! -f config/certs/certs.zip ]; then
+          echo "Creating certs";
+          echo -ne \
+          "instances:\n"\
+          "  - name: sentinel-kit-db-elasticsearch-es01\n"\
+          "    dns:\n"\
+          "      - sentinel-kit-db-elasticsearch-es01\n"\
+          "      - localhost\n"\
+          "    ip:\n"\
+          "      - 127.0.0.1\n"\
+          "  - name: sentinel-kit-db-elasticsearch-es02\n"\
+          "    dns:\n"\
+          "      - sentinel-kit-db-elasticsearch-es02\n"\
+          "      - localhost\n"\
+          "    ip:\n"\
+          "      - 127.0.0.1\n"\
+          > config/certs/instances.yml;
+          bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
+          unzip config/certs/certs.zip -d config/certs;
+        fi;
+        echo "Setting file permissions"
+        chown -R root:root config/certs;
+        find . -type d -exec chmod 750 \{\} \;;
+        find . -type f -exec chmod 640 \{\} \;;
+        echo "Waiting for Elasticsearch availability";
+        until curl -s --cacert config/certs/ca/ca.crt https://sentinel-kit-db-elasticsearch-es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
+        echo "Setting kibana_system password";
+        until curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:${ELASTICSEARCH_PASSWORD}" -H "Content-Type: application/json" https://sentinel-kit-db-elasticsearch-es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"s3nt1n3lkit_k1b4n4_syst3m_p4sswd\"}" | grep -q "^{}"; do sleep 10; done;
+        echo "All done!";
+      '
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f config/certs/es01/es01.crt ]"]
+      interval: 1s
+      timeout: 5s
+      retries: 120
+    networks:
+      - sentinel-kit-network
+
+  sentinel-kit-db-elasticsearch-es01:
+    depends_on:
+      - sentinel-kit-db-elasticsearch-setup
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSTACK_VERSION}
+    container_name: sentinel-kit-db-elasticsearch-es01
+    restart: on-failure
+    volumes:
+      - ./config/certificates/elasticsearch:/usr/share/elasticsearch/config/certs
+      - sentinel-kit_db_elasticsearch_es01_data:/usr/share/elasticsearch/data
     environment:
-      - cluster.name=docker-cluster
+      - node.name=sentinel-kit-db-elasticsearch-es01
+      - cluster.name=${ELASTICSEARCH_CLUSTER_NAME}
+      - cluster.initial_master_nodes=sentinel-kit-db-elasticsearch-es01,sentinel-kit-db-elasticsearch-es02
+      - discovery.seed_hosts=sentinel-kit-db-elasticsearch-es02
+      - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD}
       - bootstrap.memory_lock=true
-      - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms4096m -Xmx4096m"
-      - xpack.security.enabled=false
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=certs/sentinel-kit-db-elasticsearch-es01/sentinel-kit-db-elasticsearch-es01.key
+      - xpack.security.http.ssl.certificate=certs/sentinel-kit-db-elasticsearch-es01/sentinel-kit-db-elasticsearch-es01.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=certs/sentinel-kit-db-elasticsearch-es01/sentinel-kit-db-elasticsearch-es01.key
+      - xpack.security.transport.ssl.certificate=certs/sentinel-kit-db-elasticsearch-es01/sentinel-kit-db-elasticsearch-es01.crt
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.license.self_generated.type=${ELASTICSEARCH_LICENSE}
+      - xpack.ml.use_auto_machine_memory_percent=true
+    mem_limit: ${ELASTICSEARCH_MEMORY_LIMIT}
     ulimits:
       memlock:
         soft: -1
         hard: -1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
     networks:
       - sentinel-kit-network
-  
-  sentinel-kit-phpmyadmin-utils:
-    container_name: sentinel-kit-phpmyadmin-utils
-    image: phpmyadmin/phpmyadmin
-    restart: unless-stopped
-    environment:
-      PMA_HOST: sentinel-kit-mysql-db
-      PMA_PORT: 3306
-    ports:
-      - "8080:80"
-    networks:
-      - sentinel-kit-network
-    depends_on:
-      - sentinel-kit-mysql-db
-      - sentinel-kit-elasticsearch-db
-      - sentinel-kit-fluentbit-server
 
-  sentinel-kit-kibana-utils:
-    container_name: sentinel-kit-kibana-utils
-    image: kibana:9.2.0
+  sentinel-kit-db-elasticsearch-es02:
+    depends_on:
+      - sentinel-kit-db-elasticsearch-es01
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSTACK_VERSION}
+    container_name: sentinel-kit-db-elasticsearch-es02
+    restart: on-failure
+    volumes:
+      - ./config/certificates/elasticsearch:/usr/share/elasticsearch/config/certs
+      - sentinel-kit_db_elasticsearch_es02_data:/usr/share/elasticsearch/data
     environment:
-      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
-      xpack.security.enabled: false
-    ports:
-      - 5601:5601
+      - node.name=sentinel-kit-db-elasticsearch-es02
+      - cluster.name=${ELASTICSEARCH_CLUSTER_NAME}
+      - cluster.initial_master_nodes=sentinel-kit-db-elasticsearch-es01,sentinel-kit-db-elasticsearch-es02
+      - discovery.seed_hosts=sentinel-kit-db-elasticsearch-es01
+      - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=certs/sentinel-kit-db-elasticsearch-es02/sentinel-kit-db-elasticsearch-es02.key
+      - xpack.security.http.ssl.certificate=certs/sentinel-kit-db-elasticsearch-es02/sentinel-kit-db-elasticsearch-es02.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=certs/sentinel-kit-db-elasticsearch-es02/sentinel-kit-db-elasticsearch-es02.key
+      - xpack.security.transport.ssl.certificate=certs/sentinel-kit-db-elasticsearch-es02/sentinel-kit-db-elasticsearch-es02.crt
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.license.self_generated.type=${ELASTICSEARCH_LICENSE}
+      - xpack.ml.use_auto_machine_memory_percent=true
+    mem_limit: ${ELASTICSEARCH_MEMORY_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
     networks:
       - sentinel-kit-network
-    depends_on:
-      - sentinel-kit-elasticsearch-db
 
-  sentinel-kit-prometheus-utils:
-    container_name: sentinel-kit-prometheus-utils
+  sentinel-kit-utils-kibana:
+    container_name: sentinel-kit-utils-kibana
+    hostname: ${SENTINELKIT_KIBANA_HOSTNAME}
+    restart: on-failure
+    depends_on:
+      sentinel-kit-db-elasticsearch-es01:
+        condition: service_healthy
+      sentinel-kit-db-elasticsearch-es02:
+        condition: service_healthy
+      sentinel-kit-db-elasticsearch-setup:
+        condition: service_completed_successfully
+    image: docker.elastic.co/kibana/kibana:${ELASTICSTACK_VERSION}
+    volumes:
+      - ./config/certificates/elasticsearch:/usr/share/kibana/config/certs
+      - ./data/kibana:/usr/share/kibana/data
+    environment:
+      - SERVERNAME=sentinel-kit-utils-kibana
+      - KIBANA_FLEET_PACKAGE_UPDATE_ENABLED=false
+      - ELASTICSEARCH_HOSTS=https://sentinel-kit-db-elasticsearch-es01:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=s3nt1n3lkit_k1b4n4_syst3m_p4sswd
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+    mem_limit: ${ELASTICSEARCH_MEMORY_LIMIT}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    networks:
+      - sentinel-kit-network
+
+  sentinel-kit-utils-prometheus:
+    container_name: sentinel-kit-utils-prometheus
     image: prom/prometheus:latest
-    restart: unless-stopped
+    restart: on-failure
     volumes:
       - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - sentinel-kit-network
     depends_on:
-      - sentinel-kit-fluentbit-server
+      - sentinel-kit-server-fluentbit
 
-  sentinel-kit-grafana-utils:
-    container_name: sentinel-kit-grafana-utils
+  sentinel-kit-utils-grafana:
+    container_name: sentinel-kit-utils-grafana
+    hostname: ${SENTINELKIT_GRAFANA_HOSTNAME}
     image: grafana/grafana:latest
-    restart: unless-stopped
+    restart: on-failure
     volumes:
+      - ./config/certificates/grafana:/etc/grafana/ssl:ro
       - ./data/grafana:/var/lib/grafana
       - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
       - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
     environment:
-      - GF_SECURITY_ADMIN_USER=sentinel-kit_grafana_admin
-      - GF_SECURITY_ADMIN_PASSWORD=sentinel-kit_grafana_password
-    ports:
-      - "3000:3000"
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - GF_SERVER_HTTP_PORT=3000
     networks:
       - sentinel-kit-network
     depends_on:
-      - sentinel-kit-prometheus-utils
-      - sentinel-kit-elasticsearch-db
+      - sentinel-kit-utils-prometheus
+      - sentinel-kit-db-elasticsearch-es01
+
+  sentinel-kit-utils-phpmyadmin:
+    container_name: sentinel-kit-utils-phpmyadmin
+    hostname: ${SENTINELKIT_PMA_HOSTNAME}
+    image: phpmyadmin/phpmyadmin
+    restart: on-failure
+    environment:
+      PMA_HOST: sentinel-kit-db-mysql
+      PMA_PORT: 3306
+    networks:
+      - sentinel-kit-network
+    depends_on:
+      - sentinel-kit-db-mysql
 
 networks:
   sentinel-kit-network:
     driver: bridge
 
 volumes:
-  caddy_data:
-  caddy_config:
+  sentinel-kit_server_caddy_data:
+  sentinel-kit_server_caddy_config:
+  sentinel-kit_db_elasticsearch_es01_data:
+  sentinel-kit_db_elasticsearch_es02_data:
   sentinel-kit_server_backend_vendor_cache:
   sentinel-kit_server_backend_var_cache:
   sentinel-kit_server_backend_public:

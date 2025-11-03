@@ -13,10 +13,10 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\User;
 
 #[AsCommand(
-    name: 'app:users:delete',
-    description: 'Delete a user from the backend application',
+    name: 'app:users:list',
+    description: 'List all users in the backend application',
 )]
-class DeleteUserCommand extends Command
+class UsersListCommand extends Command
 {
 
     private EntityManagerInterface $entityManager;
@@ -29,31 +29,17 @@ class DeleteUserCommand extends Command
 
     protected function configure(): void
     {
-        $this
-            ->addArgument('id', InputArgument::REQUIRED, 'ID of the user to delete');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
 
-        $userId = $input->getArgument('id');
-        $user = $this->entityManager->getRepository(User::class)->find($userId);
-        if (!$user) {
-            $io->error('User not found.');
-            return Command::FAILURE;
-        }
-
-        try{
-            $this->entityManager->remove($user);
-            $this->entityManager->flush();
-        } catch (\Exception $e) {
-            $io->error('An error occurred while deleting the user: ' . $e->getMessage());
-            return Command::FAILURE;
-        }
-
-        $io->success('User deleted successfully.');
-
+        $users = $this->entityManager->getRepository(User::class)->findAll();
+        foreach ($users as $user) {
+            $io->writeln('User ID: ' . $user->getId() . ' | Email: ' . $user->getEmail());
+        }      
+      
         return Command::SUCCESS;
     }
 }

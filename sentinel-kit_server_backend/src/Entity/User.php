@@ -31,8 +31,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, TwoFact
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $googleAuthenticatorSecret = null;
 
+    #[ORM\Column]
+    private ?\DateTime $createdOn = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTime $updatedOn = null;
+
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
     private ?UserJWT $userJWT = null;
+
+    public function __construct(){
+        $this->createdOn = new \DateTime();
+        $this->updatedOn = null;
+    }
 
     public function getId(): ?int
     {
@@ -144,6 +155,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, TwoFact
         }
 
         $this->userJWT = $userJWT;
+
+        return $this;
+    }
+
+    public function getCreatedOn(): ?\DateTime
+    {
+        return $this->createdOn;
+    }
+
+    public function getUpdatedOn(): ?\DateTime
+    {
+        return $this->updatedOn;
+    }
+
+    public function setUpdatedOn(?\DateTime $updatedOn): static
+    {
+        $this->updatedOn = $updatedOn;
 
         return $this;
     }
