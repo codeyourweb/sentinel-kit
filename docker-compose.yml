@@ -54,10 +54,14 @@ services:
     container_name: sentinel-kit-server-fluentbit
     image: fluent/fluent-bit:latest
     restart: on-failure
+    environment:
+      - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD}
     volumes:
-      - ./config/fluentbit_server/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
-      - ./config/fluentbit_server/parsers.conf:/fluent-bit/etc/parsers.conf
+      - ./config/fluentbit_server:/fluent-bit/etc
       - ./data/log_ingest_data:/var/log:ro
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
     networks:
       - sentinel-kit-network
     depends_on:
