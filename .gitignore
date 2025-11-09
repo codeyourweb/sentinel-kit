@@ -1,9 +1,6 @@
 /.env.local
 /.env.local.php
 /.env.*.local
-/config/certificates/caddy_server/*
-/config/certificates/elasticsearch/*
-/config/certificates/jwt/*
 /config/yara_ruleset/*
 /config/sigma_ruleset/*
 /data/caddy_logs/*
