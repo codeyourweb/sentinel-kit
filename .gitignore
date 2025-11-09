@@ -7,7 +7,10 @@
 /data/ftp_data/*
 /data/grafana/*
 /data/kibana/*
-/data/log_ingest_data/*
+/data/fluentbit_db/*
+/data/log_ingest_data/evtx/*
+/data/log_ingest_data/auditd/*
+/data/log_ingest_data/json/*
 /data/mysql_data/*
 /data/yara_triage_data/*
 /docs/graphs/*.bkp
