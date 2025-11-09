@@ -52,17 +52,24 @@ services:
 
   sentinel-kit-server-fluentbit:
     container_name: sentinel-kit-server-fluentbit
-    image: fluent/fluent-bit:latest
+    build:
+      context: .
+      dockerfile: config/docker-config/Dockerfile.fluentbit
     restart: on-failure
+    depends_on:
+      sentinel-kit-db-elasticsearch-es01:
+        condition: service_healthy
+    user: "0"
     environment:
       - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD}
+    stdin_open: true
+    tty: true
     volumes:
       - ./config/fluentbit_server:/fluent-bit/etc
-      - ./data/log_ingest_data:/var/log:ro
+      - ./data/log_ingest_data:/fluent-bit/logs
+      - ./data/fluentbit_db:/fluent-bit/database
     networks:
       - sentinel-kit-network
-    depends_on:
-      - sentinel-kit-db-elasticsearch-es01
 
   sentinel-kit-server-sftp:
     container_name: sentinel-kit-server-sftp

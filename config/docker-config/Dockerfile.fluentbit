@@ -1,0 +1,26 @@
+FROM ubuntu:24.04
+
+RUN mkdir -p fluent-bit /fluent-bit/etc /fluent-bit/scripts /fluent-bit/logs /fluent-bit/database
+WORKDIR /fluent-bit
+COPY config/docker-config/fluentbit-evtx-dump.sh /fluent-bit/scripts/fluentbit-evtx-dump.sh
+RUN chmod +x /fluent-bit/scripts/fluentbit-evtx-dump.sh
+
+RUN apt update && \
+    apt install -y curl ca-certificates dpkg gnupg dpkg-dev && \
+    curl -L -o /tmp/fluentbit.key https://packages.fluentbit.io/fluentbit.key && \
+    gpg --dearmor < /tmp/fluentbit.key > /usr/share/keyrings/fluentbit-keyring.gpg && \
+    rm /tmp/fluentbit.key && \
+    echo "deb [signed-by=/usr/share/keyrings/fluentbit-keyring.gpg] https://packages.fluentbit.io/ubuntu/noble noble main" > /etc/apt/sources.list.d/fluent-bit.list && \
+    apt update && \
+    apt install -y fluent-bit
+
+RUN curl -L -o /tmp/fd-musl_10.3.0_amd64.deb https://github.com/sharkdp/fd/releases/download/v10.3.0/fd-musl_10.3.0_amd64.deb && \
+    dpkg -i /tmp/fd-musl_10.3.0_amd64.deb && \
+    rm /tmp/fd-musl_10.3.0_amd64.deb && \
+    curl -L -o /usr/bin/evtx_dump https://github.com/omerbenamram/evtx/releases/download/v0.9.0/evtx_dump-v0.9.0-x86_64-unknown-linux-musl && \
+    chmod +x /usr/bin/evtx_dump && \
+    apt clean && rm -rf /var/lib/apt/lists/*
+
+COPY config/fluentbit_server/fluent-bit.conf /fluent-bit/etc/fluent-bit.conf
+ENTRYPOINT ["/opt/fluent-bit/bin/fluent-bit"] 
+CMD ["-c", "/fluent-bit/etc/fluent-bit.conf"]
