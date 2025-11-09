@@ -32,9 +32,9 @@ services:
       - CORS_ALLOW_ORIGIN=https://${SENTINELKIT_FRONTEND_HOSTNAME}
     volumes:
       - ./config/docker-config/backend-entrypoint.sh:/usr/local/bin/backend-entrypoint.sh:ro
-      - ./config/certificates/jwt:/var/www/html/config/jwt
       - ./sentinel-kit_server_backend:/var/www/html:delegated
       - ./sentinel-kit_server_backend/public:/var/www/html/public:delegated
+      - sentinel-kit_certificates_jwt:/var/www/html/config/jwt
       - sentinel-kit_server_backend_vendor_cache:/var/www/html/vendor
       - sentinel-kit_server_backend_var_cache:/var/www/html/var
     stdin_open: true
@@ -59,9 +59,6 @@ services:
     volumes:
       - ./config/fluentbit_server:/fluent-bit/etc
       - ./data/log_ingest_data:/var/log:ro
-    ports:
-      - "24224:24224"
-      - "24224:24224/udp"
     networks:
       - sentinel-kit-network
     depends_on:
@@ -79,6 +76,7 @@ services:
     networks:
       - sentinel-kit-network
     working_dir: /home/${SFTP_USER}/uploads
+    profiles: ["sftp"]
 
   sentinel-kit-db-mysql:
     container_name: sentinel-kit-db-mysql
@@ -109,8 +107,8 @@ services:
       - "443:443"
     volumes:
       - ./config/caddy_server/Caddyfile:/etc/caddy/Caddyfile
-      - ./config/certificates/caddy_server:/data/caddy/pki/authorities/local
       - ./data/caddy_logs:/var/log/caddy
+      - sentinel-kit_certificates_caddy:/data/caddy/pki/authorities/local
       - sentinel-kit_server_caddy_data:/data
       - sentinel-kit_server_caddy_config:/config
     networks:
@@ -120,56 +118,20 @@ services:
       - sentinel-kit-app-backend
       - sentinel-kit-db-mysql
 
-  sentinel-kit-db-elasticsearch-setup:
+  sentinel-kit-conf-elasticsearch-setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSTACK_VERSION}
-    container_name: sentinel-kit-db-elasticsearch-setup
+    container_name: sentinel-kit-conf-elasticsearch-setup
     restart: on-failure
     volumes:
-      - ./config/certificates/elasticsearch:/usr/share/elasticsearch/config/certs
+      -  sentinel-kit_certificates_elasticsearch:/usr/share/elasticsearch/config/certs
+      - ./config/elasticsearch/ca-setup.sh:/usr/share/elasticsearch/ca-setup.sh:ro
     user: "0"
-    command: >
-      bash -c '
-        if [ x${ELASTICSEARCH_PASSWORD} == x ]; then
-          echo "Set the ELASTICSEARCH_PASSWORD environment variable in the .env file";
-          exit 1;
-        fi;
-        if [ ! -f config/certs/ca.zip ]; then
-          echo "Creating CA";
-          bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
-          unzip config/certs/ca.zip -d config/certs;
-        fi;
-        if [ ! -f config/certs/certs.zip ]; then
-          echo "Creating certs";
-          echo -ne \
-          "instances:\n"\
-          "  - name: sentinel-kit-db-elasticsearch-es01\n"\
-          "    dns:\n"\
-          "      - sentinel-kit-db-elasticsearch-es01\n"\
-          "      - localhost\n"\
-          "    ip:\n"\
-          "      - 127.0.0.1\n"\
-          "  - name: sentinel-kit-db-elasticsearch-es02\n"\
-          "    dns:\n"\
-          "      - sentinel-kit-db-elasticsearch-es02\n"\
-          "      - localhost\n"\
-          "    ip:\n"\
-          "      - 127.0.0.1\n"\
-          > config/certs/instances.yml;
-          bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
-          unzip config/certs/certs.zip -d config/certs;
-        fi;
-        echo "Setting file permissions"
-        chown -R root:root config/certs;
-        find . -type d -exec chmod 750 \{\} \;;
-        find . -type f -exec chmod 640 \{\} \;;
-        echo "Waiting for Elasticsearch availability";
-        until curl -s --cacert config/certs/ca/ca.crt https://sentinel-kit-db-elasticsearch-es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
-        echo "Setting kibana_system password";
-        until curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:${ELASTICSEARCH_PASSWORD}" -H "Content-Type: application/json" https://sentinel-kit-db-elasticsearch-es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"s3nt1n3lkit_k1b4n4_syst3m_p4sswd\"}" | grep -q "^{}"; do sleep 10; done;
-        echo "All done!";
-      '
+    command: 'sh -c "/usr/share/elasticsearch/ca-setup.sh"'
+    environment:
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - ELASTICSEARCH_CLUSTER_MODE=${ELASTICSEARCH_CLUSTER_MODE}
     healthcheck:
-      test: ["CMD-SHELL", "[ -f config/certs/es01/es01.crt ]"]
+      test: ["CMD-SHELL", "[ -f /usr/share/elasticsearch/config/certs/es01/es01.crt ]"]
       interval: 1s
       timeout: 5s
       retries: 120
@@ -178,18 +140,17 @@ services:
 
   sentinel-kit-db-elasticsearch-es01:
     depends_on:
-      - sentinel-kit-db-elasticsearch-setup
+      - sentinel-kit-conf-elasticsearch-setup
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSTACK_VERSION}
     container_name: sentinel-kit-db-elasticsearch-es01
     restart: on-failure
     volumes:
-      - ./config/certificates/elasticsearch:/usr/share/elasticsearch/config/certs
+      - sentinel-kit_certificates_elasticsearch:/usr/share/elasticsearch/config/certs
       - sentinel-kit_db_elasticsearch_es01_data:/usr/share/elasticsearch/data
     environment:
       - node.name=sentinel-kit-db-elasticsearch-es01
       - cluster.name=${ELASTICSEARCH_CLUSTER_NAME}
-      - cluster.initial_master_nodes=sentinel-kit-db-elasticsearch-es01,sentinel-kit-db-elasticsearch-es02
-      - discovery.seed_hosts=sentinel-kit-db-elasticsearch-es02
+      - cluster.initial_master_nodes=sentinel-kit-db-elasticsearch-es01
       - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD}
       - bootstrap.memory_lock=true
       - xpack.security.enabled=true
@@ -224,16 +185,17 @@ services:
   sentinel-kit-db-elasticsearch-es02:
     depends_on:
       - sentinel-kit-db-elasticsearch-es01
+      - sentinel-kit-conf-elasticsearch-setup
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSTACK_VERSION}
     container_name: sentinel-kit-db-elasticsearch-es02
     restart: on-failure
     volumes:
-      - ./config/certificates/elasticsearch:/usr/share/elasticsearch/config/certs
+      -  sentinel-kit_certificates_elasticsearch:/usr/share/elasticsearch/config/certs
       - sentinel-kit_db_elasticsearch_es02_data:/usr/share/elasticsearch/data
     environment:
       - node.name=sentinel-kit-db-elasticsearch-es02
       - cluster.name=${ELASTICSEARCH_CLUSTER_NAME}
-      - cluster.initial_master_nodes=sentinel-kit-db-elasticsearch-es01,sentinel-kit-db-elasticsearch-es02
+      - cluster.initial_master_nodes=sentinel-kit-db-elasticsearch-es01
       - discovery.seed_hosts=sentinel-kit-db-elasticsearch-es01
       - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD}
       - bootstrap.memory_lock=true
@@ -265,6 +227,7 @@ services:
       retries: 120
     networks:
       - sentinel-kit-network
+    profiles: ["es-secondary-node"]
 
   sentinel-kit-utils-kibana:
     container_name: sentinel-kit-utils-kibana
@@ -273,13 +236,9 @@ services:
     depends_on:
       sentinel-kit-db-elasticsearch-es01:
         condition: service_healthy
-      sentinel-kit-db-elasticsearch-es02:
-        condition: service_healthy
-      sentinel-kit-db-elasticsearch-setup:
-        condition: service_completed_successfully
     image: docker.elastic.co/kibana/kibana:${ELASTICSTACK_VERSION}
     volumes:
-      - ./config/certificates/elasticsearch:/usr/share/kibana/config/certs
+      -  sentinel-kit_certificates_elasticsearch:/usr/share/kibana/config/certs/elasticsearch:ro
       - ./data/kibana:/usr/share/kibana/data
     environment:
       - SERVERNAME=sentinel-kit-utils-kibana
@@ -287,7 +246,7 @@ services:
       - ELASTICSEARCH_HOSTS=https://sentinel-kit-db-elasticsearch-es01:9200
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=s3nt1n3lkit_k1b4n4_syst3m_p4sswd
-      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/elasticsearch/ca/ca.crt
     mem_limit: ${ELASTICSEARCH_MEMORY_LIMIT}
     healthcheck:
       test:
@@ -300,6 +259,7 @@ services:
       retries: 120
     networks:
       - sentinel-kit-network
+    profiles: ["kibana"]
 
   sentinel-kit-utils-prometheus:
     container_name: sentinel-kit-utils-prometheus
@@ -311,6 +271,7 @@ services:
       - sentinel-kit-network
     depends_on:
       - sentinel-kit-server-fluentbit
+    profiles: ["internal-monitoring"]
 
   sentinel-kit-utils-grafana:
     container_name: sentinel-kit-utils-grafana
@@ -319,7 +280,7 @@ services:
     restart: on-failure
     user: "0"
     volumes:
-      - ./config/certificates/elasticsearch/ca/ca.crt:/etc/grafana/certs/elasticsearch-ca.crt:ro
+      -  sentinel-kit_certificates_elasticsearch:/etc/grafana/certs/elasticsearch:ro
       - ./data/grafana:/var/lib/grafana
       - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
       - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
@@ -337,9 +298,10 @@ services:
       - /bin/sh
       - -c
       - |
-        cp /etc/grafana/certs/elasticsearch-ca.crt /usr/local/share/ca-certificates/elasticsearch-ca.crt
+        cp /etc/grafana/certs/elasticsearch/ca/ca.crt /usr/local/share/ca-certificates/elasticsearch-ca.crt
         update-ca-certificates
         /run.sh
+    profiles: ["internal-monitoring"]
 
   sentinel-kit-utils-phpmyadmin:
     container_name: sentinel-kit-utils-phpmyadmin
@@ -353,7 +315,7 @@ services:
       - sentinel-kit-network
     depends_on:
       - sentinel-kit-db-mysql
-
+    profiles: ["phpmyadmin"]
 networks:
   sentinel-kit-network:
     driver: bridge
@@ -366,3 +328,6 @@ volumes:
   sentinel-kit_server_backend_vendor_cache:
   sentinel-kit_server_backend_var_cache:
   sentinel-kit_server_backend_public:
+  sentinel-kit_certificates_elasticsearch:
+  sentinel-kit_certificates_caddy:
+  sentinel-kit_certificates_jwt:
