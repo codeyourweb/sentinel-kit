@@ -16,6 +16,7 @@
 /docs/graphs/*.bkp
 /sentinel-kit_server_frontend/node_modules/*
 /sentinel-kit_server_frontend/package-lock.json
+/sentinel-kit_server_backend/composer.lock
 /sentinel-kit_server_backend/migrations/*
 /sentinel-kit_server_backend/var/*
 /sentinel-kit_server_backend/vendor/*
