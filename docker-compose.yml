@@ -28,8 +28,10 @@ services:
     environment:
       - JWT_PASSPHRASE=${BACKEND_JWT_PASSPHRASE}
       - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@sentinel-kit-db-mysql:3306/${MYSQL_DATABASE}?serverVersion=9.4.0&charset=utf8
+      - DEFAULT_URI=https://${SENTINELKIT_BACKEND_HOSTNAME}
       - DATAMONITOR_SERVER_TOKEN=${SENTINELKIT_DATAMONITOR_SERVER_TOKEN}
       - CORS_ALLOW_ORIGIN=https://${SENTINELKIT_FRONTEND_HOSTNAME}
+      - FLUENTBIT_SERVER_URL=http://sentinel-kit-server-fluentbit:24224
     volumes:
       - ./config/docker-config/backend-entrypoint.sh:/usr/local/bin/backend-entrypoint.sh:ro
       - ./sentinel-kit_server_backend:/var/www/html:delegated
