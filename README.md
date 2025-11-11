@@ -1,9 +1,8 @@
 ![Sentinel Kit](docs/img/sentinel-kit_logo.png)
 # 🛡️ Sentinel Kit: The Simplified Platform for Incident Response (SOC & DFIR)
 
-$\color{red}{\textsf{**WARNING**: This project is currently in an early stage of development. Not all components have been ported to this repository, and the features are not yet stable enough for production use.}}$
+**WARNING**: This project is currently in an early stage of development. Not all components have been ported to this repository, and the features are not yet stable enough for production use. The features already available online are documented [here](docs/index.md).
 
-The features already available online are documented [here](docs/index.md).
 ---
 
 **Sentinel Kit** is a comprehensive Docker stack designed to provide **Digital Forensics and Incident Response (DFIR)** and **Security Operations Center (SOC)** capabilities with unparalleled deployment simplicity.
