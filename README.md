@@ -1,12 +1,14 @@
 ![Sentinel Kit](docs/img/sentinel-kit_logo.png)
 # 🛡️ Sentinel Kit: The Simplified Platform for Incident Response (SOC & DFIR)
 
-## WARNING: This project is currently in an early stage of development. Not all components have been ported to this repository, and the features are not yet stable enough for production use. 
+$\color{red}{\textsf{**WARNING**: This project is currently in an early stage of development. Not all components have been ported to this repository, and the features are not yet stable enough for production use.}}$
+
+The features already available online are documented [here](docs/index.md).
 ---
 
 **Sentinel Kit** is a comprehensive Docker stack designed to provide **Digital Forensics and Incident Response (DFIR)** and **Security Operations Center (SOC)** capabilities with unparalleled deployment simplicity.
 
-Ideal for **situational monitoring** or **rapid security incident response**, this integrated platform enables collection, analysis, detection, and immediate response to threats.
+Ideal for **situational monitoring** or **small-scale security incident response**, this integrated platform enables collection, analysis, detection, and immediate response to threats.
 
 ---
 
@@ -91,19 +93,19 @@ All of this can be edited in `.env` file
 
 ## 🛠️ Technical Architecture (via `docker-compose.yml`)
 
-The architecture is modular and relies on the interconnection of several services via the **sentinel-kit-network** network.
+The architecture is modular and relies on the interconnection of several services
 ![Sentinel-Kit architecture](docs/img/sentinel-kit_network_flow.png)
 
 ## ⚙️ Configuration
 
 Main configurations are located in the `config/` folder: (edit these elements only if you know what you are doing 😊)
 
-* `config/caddy_server`: Reverse proxy that serve front and back-end web applications
-* `config/certificates`: Contains TLS certification chains for elasticstack, caddy and backend JWT
+* `config/caddy_server`: Reverse proxy that serve front and back-end web applications.
 * `config/docker-config`: Server stack configuration (dockerfile, entrypoints...).
+* `config/elasticsearch`: Configuration of the Elasticsearch certification chain and nodes cluster.
 * `config/fluentbit_server`: Fluent Bit configuration files (inputs, filters, outputs to Elasticsearch).
 * `config/grafana`: Grafana initial setup (datasources and dashboards).
-* `config/prometheus/prometheus.yml`: Prometheus monitoring targets configuration.
+* `config/prometheus`: Prometheus monitoring targets configuration.
 * `config/sigma_ruleset`: sigma rules used on elasticsearch ingested logs
 * `config/yara_ruleset`: yara rules used on `data/yara_triage_data` folder or by *sentinel-kit_datamonitor* agent
 
@@ -111,13 +113,14 @@ Main configurations are located in the `config/` folder: (edit these elements on
 
 Persistent data are located in the `data/` folder:
 
-* `data/caddy_logs`: Store the caddy server access & error logs
-* `data/ftp_data`: Store file uploaded on the SFTP server
-* `data/grafana`: Contains a persistence of your grafana profile if you want to make your own dashboard and customizations
-* `data/kibana`: Kibana user customizations
-* `data/log_ingest_data`: Is designed to forward logs if you don't want to use fluentbit HTTP forwarder
-* `data/mysql_data`: Constains a persistence of the web backend database
-* `data/yara_triage_data`: is used to automatically scan any file placed in this folder  
+* `data/caddy_logs`: Store the caddy server access & error logs.
+* `data/fluentbit_db`: fluentbit ingest database (to avoid indexing same data several times).
+* `data/ftp_data`: Store file uploaded on the SFTP server.
+* `data/grafana`: Contains a persistence of your grafana profile if you want to make your own dashboard and customizations.
+* `data/kibana`: Kibana user customizations (dashboard, config...).
+* `data/log_ingest_data`: Is designed to forward logs if you don't want to use fluentbit HTTP forwarder.
+* `data/mysql_data`: Constains a persistence of the web backend database.
+* `data/yara_triage_data`: is used to automatically scan any file placed in this folder.  
 
 ---
 
@@ -129,11 +132,7 @@ To stop and remove the containers, networks, and volumes created by Docker Compo
 docker-compose down -v
 ```
 
-If you want to erase all user data:
-* remove the __content__ of every folder inside `data/`
-* remove the __content__ of `config/certificates/` in caddy_server, elasticsearch and jwt
-* remove the __content__ of `config/grafana`
-* finally, rebuild the stack with the following command:
+If you want to erase all user data, and start from a fresh and clean installation, there is a `clean-user-data` sh or powershell (depending on your OS) to help you erasing all personal data. Then, you can rebuild the whole stack with: 
 
 ```bash
 docker-compose up --build --force-recreate
