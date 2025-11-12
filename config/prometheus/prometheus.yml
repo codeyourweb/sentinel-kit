@@ -4,5 +4,16 @@ global:
 scrape_configs:
   - job_name: 'fluentbit'
     static_configs:
-      - targets: ['sentinel-kit-fluentbit-server:2020']
+      - targets: ['sentinel-kit-server-fluentbit:2020']
     metrics_path: /api/v1/metrics/prometheus
+  - job_name: 'caddy hosts'
+    static_configs:
+      - targets: ['sentinel-kit-server-caddy:2020']
+    metrics_path: /metrics
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['sentinel-kit-utils-elastic-exporter:9114']
+    metrics_path: /metrics
+  - job_name: 'mysql'
+    static_configs:
+      - targets: ['sentinel-kit-utils-mysql-exporter:9104']

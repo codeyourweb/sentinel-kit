@@ -54,6 +54,7 @@ services:
 
   sentinel-kit-server-fluentbit:
     container_name: sentinel-kit-server-fluentbit
+    hostname: sentinel-kit-server-fluentbit
     build:
       context: .
       dockerfile: config/docker-config/Dockerfile.fluentbit
@@ -75,6 +76,7 @@ services:
 
   sentinel-kit-server-sftp:
     container_name: sentinel-kit-server-sftp
+    hostname: sentinel-kit-server-sftp
     image: atmoz/sftp
     restart: on-failure
     command: ${SFTP_USER}:${SFTP_PASSWORD}:1001
@@ -89,6 +91,7 @@ services:
 
   sentinel-kit-db-mysql:
     container_name: sentinel-kit-db-mysql
+    hostname: sentinel-kit-db-mysql
     image: mysql:9.4.0
     restart: on-failure
     environment:
@@ -96,10 +99,26 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_EXPORTER_PASSWORD: ${MYSQL_EXPORTER_PASSWORD}
     volumes:
-      - ./data/mysql_data:/var/lib/mysql
+      - sentinel-kit_db_mysql_data:/var/lib/mysql
+      - ./config/mysql/init_mysqld_exporter.sh:/docker-entrypoint-initdb.d/init_mysqld_exporter.sh:ro
     networks:
       - sentinel-kit-network
+
+  sentinel-kit-utils-phpmyadmin:
+    container_name: sentinel-kit-utils-phpmyadmin
+    hostname: ${SENTINELKIT_PMA_HOSTNAME}
+    image: phpmyadmin/phpmyadmin
+    restart: on-failure
+    environment:
+      PMA_HOST: sentinel-kit-db-mysql
+      PMA_PORT: 3306
+    networks:
+      - sentinel-kit-network
+    depends_on:
+      - sentinel-kit-db-mysql
+    profiles: ["phpmyadmin"]
 
   sentinel-kit-server-caddy:
     image: caddy:2.10.2-alpine
@@ -278,8 +297,6 @@ services:
       - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - sentinel-kit-network
-    depends_on:
-      - sentinel-kit-server-fluentbit
     profiles: ["internal-monitoring"]
 
   sentinel-kit-utils-grafana:
@@ -298,11 +315,11 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
       - GF_SERVER_HTTP_PORT=3000
       - ES_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     networks:
       - sentinel-kit-network
-    depends_on:
-      - sentinel-kit-utils-prometheus
-      - sentinel-kit-db-elasticsearch-es01
     entrypoint: 
       - /bin/sh
       - -c
@@ -312,19 +329,45 @@ services:
         /run.sh
     profiles: ["internal-monitoring"]
 
-  sentinel-kit-utils-phpmyadmin:
-    container_name: sentinel-kit-utils-phpmyadmin
-    hostname: ${SENTINELKIT_PMA_HOSTNAME}
-    image: phpmyadmin/phpmyadmin
+  sentinel-kit-utils-elastic-exporter:
+    hostname: sentinel-kit-utils-elastic-exporter
+    container_name: sentinel-kit-utils-elastic-exporter
+    image: justwatch/elasticsearch_exporter:latest
     restart: on-failure
     environment:
-      PMA_HOST: sentinel-kit-db-mysql
-      PMA_PORT: 3306
+      - ES_URI=https://sentinel-kit-db-elasticsearch-es01:9200 
+      - ES_ALL=true
+      - ES_TIMEOUT=10s
+      - ES_SKIP_TLS_VERIFY=false
+      - ES_CA_PATH=/usr/share/exporter/ca/ca.crt
+      - ES_USERNAME=elastic 
+      - ES_PASSWORD=${ELASTICSEARCH_PASSWORD}
+    volumes:
+      - sentinel-kit_certificates_elasticsearch:/usr/share/exporter/ca
+    networks:
+      - sentinel-kit-network
+    depends_on:
+      sentinel-kit-db-elasticsearch-es01:
+        condition: service_healthy
+    profiles: ["internal-monitoring"]
+
+  sentinel-kit-utils-mysql-exporter:
+    hostname: sentinel-kit-utils-mysql-exporter
+    container_name: sentinel-kit-utils-mysql-exporter
+    image: prom/mysqld-exporter:latest
+    restart: on-failure
+    environment:
+      - MYSQLD_EXPORTER_PASSWORD=${MYSQL_EXPORTER_PASSWORD}
+    volumes:
+      - ./config/mysql/my.cnf:/etc/mysql/my.cnf:ro
+    command:
+      [ "--config.my-cnf=/etc/mysql/my.cnf" ]
     networks:
       - sentinel-kit-network
     depends_on:
       - sentinel-kit-db-mysql
-    profiles: ["phpmyadmin"]
+    profiles: ["internal-monitoring"]
+
 networks:
   sentinel-kit-network:
     driver: bridge
@@ -334,6 +377,7 @@ volumes:
   sentinel-kit_server_caddy_config:
   sentinel-kit_db_elasticsearch_es01_data:
   sentinel-kit_db_elasticsearch_es02_data:
+  sentinel-kit_db_mysql_data:
   sentinel-kit_server_backend_vendor_cache:
   sentinel-kit_server_backend_var_cache:
   sentinel-kit_server_backend_public:
