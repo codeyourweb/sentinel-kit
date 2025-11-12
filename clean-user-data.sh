@@ -6,6 +6,5 @@ rm -rf ./data/log_ingest_data/evtx/*
 rm -rf ./data/log_ingest_data/auditd/*
 rm -rf ./data/log_ingest_data/json/*
 rm -rf ./data/fluentbit_db/*
-rm -rf ./data/mysql_data/*
 rm -rf ./data/yara_triage_data/*
 docker compose down -v

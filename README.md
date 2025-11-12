@@ -118,7 +118,6 @@ Persistent data are located in the `data/` folder:
 * `data/grafana`: Contains a persistence of your grafana profile if you want to make your own dashboard and customizations.
 * `data/kibana`: Kibana user customizations (dashboard, config...).
 * `data/log_ingest_data`: Is designed to forward logs if you don't want to use fluentbit HTTP forwarder.
-* `data/mysql_data`: Constains a persistence of the web backend database.
 * `data/yara_triage_data`: is used to automatically scan any file placed in this folder.  
 
 ---

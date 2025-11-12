@@ -1,3 +1,12 @@
+{
+	servers {
+    	metrics
+    }
+    admin :2020
+}
+
+
+
 # TLS reverse proxy configuration
 {$SENTINELKIT_BACKEND_HOSTNAME}:443 {
     tls internal

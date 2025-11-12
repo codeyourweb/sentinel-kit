@@ -6,6 +6,5 @@ Remove-Item ./data/log_ingest_data/auditd/* -Recurse -Force
 Remove-Item ./data/log_ingest_data/evtx/* -Recurse -Force
 Remove-Item ./data/log_ingest_data/json/* -Recurse -Force
 Remove-Item ./data/fluentbit_db/* -Recurse -Force
-Remove-Item ./data/mysql_data/* -Recurse -Force
 Remove-Item ./data/yara_triage_data/* -Recurse -Force
 docker compose down -v
