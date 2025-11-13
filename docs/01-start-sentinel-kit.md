@@ -55,7 +55,7 @@ Initial startup could be long as elastic configure two nodes and kibana.
 
 Caddy server will generate a complete certification chain for the exposed services (frontend, backend, phpmyadmin, kibana, grafana). If you don't want to always accept untrusted certification chains, add root and intermediate CA to your browser certificates. They are located in ./config/certificates/caddy_server
 
-[https://sentinel-kit.local]https://sentinel-kit.local should return the following page:
+https://sentinel-kit.local should return the following page:
 ![Sentinel Kit Homepage](img/sentinel-kit_homepage.png)
 
 And, that's all, you are good to go!
