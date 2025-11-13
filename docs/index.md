@@ -15,4 +15,4 @@ Sentinel Kit server launches as a `docker-compose` stack and exposes the followi
 * [Custommize your stack, credential, elastic cluster...](02-customize-stack.md)   
 * [Create a first admin account](03-create-admin-user.md)
 * [Ingest logs](04-ingest-logs.md)
-* [Monitore services](05-monitor-services.md)
+* [Monitor services](05-monitor-services.md)
