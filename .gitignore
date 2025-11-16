@@ -1,6 +1,7 @@
 /.env.local
 /.env.local.php
 /.env.*.local
+/config/caddy_server/certificates/*
 /config/yara_ruleset/*
 /config/sigma_ruleset/*
 /config/backend/*

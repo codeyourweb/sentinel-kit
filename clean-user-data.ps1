@@ -1,4 +1,6 @@
 Remove-Item ./config/backend/.initial_setup_done -Force
+Remove-Item ./config/caddy_server/certificates/* -Recurse -Force
+Remove-Item ./sentinel-kit_server_backend/config/jwt/*.pem -Force
 Remove-Item ./data/caddy_logs/* -Recurse -Force
 Remove-Item ./data/ftp_data/* -Recurse -Force
 Remove-Item ./data/grafana/* -Recurse -Force

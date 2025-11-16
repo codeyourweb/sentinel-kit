@@ -10,6 +10,8 @@ rm -rf /var/www/html/migrations/*.php
 php /var/www/html/bin/console doctrine:schema:drop --force --full-database
 php /var/www/html/bin/console make:migration -n
 php /var/www/html/bin/console doctrine:migrations:migrate -n
+php /var/www/html/bin/console lexik:jwt:generate-keypair
+php /var/www/html/bin/console lexik:jwt:check-config
 touch "$MARKER_FILE"
 fi
 echo "Starting Symfony server..."

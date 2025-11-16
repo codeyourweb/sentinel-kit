@@ -24,6 +24,8 @@
 
 <script setup>
 import { ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 
 const isInvalid = ref(false);
 const otp = ref(['', '', '', '', '', '']);
