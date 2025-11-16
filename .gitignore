@@ -3,6 +3,7 @@
 /.env.*.local
 /config/yara_ruleset/*
 /config/sigma_ruleset/*
+/config/backend/*
 /data/caddy_logs/*
 /data/ftp_data/*
 /data/grafana/*
