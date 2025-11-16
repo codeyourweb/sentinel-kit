@@ -1,3 +1,4 @@
+Remove-Item ./config/backend/.initial_setup_done -Force
 Remove-Item ./data/caddy_logs/* -Recurse -Force
 Remove-Item ./data/ftp_data/* -Recurse -Force
 Remove-Item ./data/grafana/* -Recurse -Force

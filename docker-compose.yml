@@ -34,6 +34,7 @@ services:
       - FLUENTBIT_SERVER_URL=http://sentinel-kit-server-fluentbit:24224
     volumes:
       - ./config/docker-config/backend-entrypoint.sh:/usr/local/bin/backend-entrypoint.sh:ro
+      - ./config/backend/:/opt/server-backend:delegated
       - ./sentinel-kit_server_backend:/var/www/html:delegated
       - ./sentinel-kit_server_backend/public:/var/www/html/public:delegated
       - ./config/sigma_ruleset:/detection-rules/sigma
@@ -138,10 +139,6 @@ services:
       - sentinel-kit_server_caddy_config:/config
     networks:
       - sentinel-kit-network
-    depends_on:
-      - sentinel-kit-app-frontend
-      - sentinel-kit-app-backend
-      - sentinel-kit-db-mysql
 
   sentinel-kit-conf-elasticsearch-setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSTACK_VERSION}
