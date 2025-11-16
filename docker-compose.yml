@@ -1,8 +1,8 @@
 services:
   sentinel-kit-app-frontend:
+    image: node:22-alpine
     container_name: sentinel-kit-app-frontend
     hostname: ${SENTINELKIT_FRONTEND_HOSTNAME}
-    image: node:22-alpine
     working_dir: /app
     environment:
       - VITE_ALLOWED_HOSTS=.${SENTINELKIT_FRONTEND_HOSTNAME}

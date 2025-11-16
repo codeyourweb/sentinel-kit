@@ -1,17 +1,11 @@
 @import "tailwindcss";
-@plugin "flyonui";
-@import "flyonui/variants.css";
-@source "../node_modules/flyonui/flyonui.js"; 
 @plugin "@iconify/tailwind4";
-
 @plugin "flyonui" {
-  themes: light --default, dark --prefersdark, claude;
+  themes: claude;
 }
+@import "flyonui/variants.css";
+@source "../node_modules/flyonui/flyonui.js";
 
-[data-theme="claude"] {
-  --color-primary: 36 86% 62%;
-  --color-secondary: 219 14% 71%;
-}
 
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -28,13 +22,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 100vw;
-  min-height: 100vh;
-}
 
 h1 {
   font-size: 3.2em;

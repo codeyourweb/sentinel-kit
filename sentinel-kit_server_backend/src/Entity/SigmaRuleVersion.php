@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\SigmaRuleVersionRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: SigmaRuleVersionRepository::class)]
 class SigmaRuleVersion
@@ -12,9 +13,11 @@ class SigmaRuleVersion
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['rule_details'])]
     private ?int $id = null;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Groups(['rule_details'])]
     private ?string $content = null;
 
     #[ORM\Column(length: 64, unique: true)]
@@ -25,6 +28,7 @@ class SigmaRuleVersion
     private ?SigmaRule $rule = null;
 
     #[ORM\Column]
+    #[Groups(['rule_details'])]
     private ?\DateTime $createdOn = null;
 
     public function __construct()

@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: SigmaRuleRepository::class)]
 class SigmaRule
@@ -14,12 +15,15 @@ class SigmaRule
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['rule_details'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255, unique: true)]
+    #[Groups(['rule_details'])]
     private ?string $title = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['rule_details'])]
     private ?string $description = null;
 
     #[ORM\Column(length: 255, unique: true)]
@@ -32,9 +36,12 @@ class SigmaRule
      * @var Collection<int, SigmaRuleVersion>
      */
     #[ORM\OneToMany(targetEntity: SigmaRuleVersion::class, mappedBy: 'rule', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['createdOn' => 'DESC'])]
+    #[Groups(['rule_details'])]
     private Collection $versions;
 
     #[ORM\Column]
+    #[Groups(['rule_details'])]
     private ?\DateTime $createdOn = null;
 
 
