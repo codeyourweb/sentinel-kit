@@ -134,7 +134,7 @@ services:
     volumes:
       - ./config/caddy_server/Caddyfile:/etc/caddy/Caddyfile
       - ./data/caddy_logs:/var/log/caddy
-      - sentinel-kit_certificates_caddy:/data/caddy/pki/authorities/local
+      - ./config/caddy_server/certificates:/data/caddy/pki/authorities/local
       - sentinel-kit_server_caddy_data:/data
       - sentinel-kit_server_caddy_config:/config
     networks:
@@ -376,5 +376,4 @@ volumes:
   sentinel-kit_server_backend_var_cache:
   sentinel-kit_server_backend_public:
   sentinel-kit_certificates_elasticsearch:
-  sentinel-kit_certificates_caddy:
   sentinel-kit_certificates_jwt:
