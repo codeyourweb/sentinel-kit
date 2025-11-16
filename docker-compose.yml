@@ -36,17 +36,14 @@ services:
       - ./config/docker-config/backend-entrypoint.sh:/usr/local/bin/backend-entrypoint.sh:ro
       - ./sentinel-kit_server_backend:/var/www/html:delegated
       - ./sentinel-kit_server_backend/public:/var/www/html/public:delegated
+      - ./config/sigma_ruleset:/detection-rules/sigma
       - sentinel-kit_certificates_jwt:/var/www/html/config/jwt
       - sentinel-kit_server_backend_vendor_cache:/var/www/html/vendor
       - sentinel-kit_server_backend_var_cache:/var/www/html/var
     stdin_open: true
     tty: true
     command: >
-      sh -c "symfony server:ca:install &&
-             rm -rf /var/www/html/var/cache &&
-             rm -rf /var/www/html/public/bundles &&
-             composer install && 
-             symfony server:start --allow-http --port=8000 --listen-ip='0.0.0.0'"
+      sh -c "/usr/local/bin/backend-entrypoint.sh"
     networks:
       - sentinel-kit-network
     depends_on:
