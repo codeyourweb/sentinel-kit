@@ -8,12 +8,12 @@
                 </button>
             </div>
             <nav class="flex-grow space-y-2 p-3">
-                <a v-for="item in menuItems" :key="item.name" href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-150 group" :class="{ 'justify-center': isCollapsed }" :title="isCollapsed ? item.name : ''">
+                <RouterLink v-for="item in menuItems" :key="item.name" :to="{ name: item.route }" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-150 group" :class="{ 'justify-center': isCollapsed }" :title="isCollapsed ? item.name : ''">
                     <span :class="`w-6 h-6 flex-shrink-0 icon-[${item.icon}] size-10 bg-white`"></span>
                     <span v-if="!isCollapsed" class="ml-4 font-medium whitespace-nowrap overflow-hidden">
-                        <a href="#" class="link link-primary [--link-color:orange]">{{ item.name }}</a>
+                        <RouterLink :key="item.name" :to="{ name: item.route }" class="link link-primary [--link-color:orange]">{{ item.name }}</RouterLink>
                     </span>
-                </a>
+                </RouterLink>
             </nav>
         </aside>
 
@@ -29,7 +29,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
-import { RouterView } from 'vue-router';
+import { RouterView, RouterLink } from 'vue-router';
 import Header from './components/Header.vue';
 
 const isLoggedIn = ref(false);
@@ -41,15 +41,12 @@ onMounted(() => {
 });
 
 const menuItems = [
-{ name: 'Home', icon: 'mdi-light--home' },
-{ name: 'Dashboard', icon: 'svg-spinners--blocks-wave' },
-{ name: 'Assets & groups', icon: 'line-md--computer-twotone' },
-{ name: 'Rulesets', icon: 'mdi--account-child' },
-{ name: 'Detections', icon: 'shield' },
-{ name: 'Users', icon: 'line-md--account' },
-{ name: 'Settings', icon: 'settings' }
+{ name: 'Home', icon: 'mdi-light--home', route: 'Home' },
+{ name: 'Dashboard', icon: 'svg-spinners--blocks-wave', route: 'Home' },
+{ name: 'Assets & groups', icon: 'line-md--computer-twotone', route: 'Home' },
+{ name: 'Rulesets', icon: 'mdi--account-child', route: 'RulesList' },
+{ name: 'Detections', icon: 'shield', route: 'Home' },
+{ name: 'Users', icon: 'line-md--account', route: 'Home' },
+{ name: 'Settings', icon: 'settings', route: 'Home' }
 ];
-
-// Si vous utilisez une fonction de toggle dans le Header, vous pouvez la définir ici:
-// const toggleSidebar = () => { isCollapsed.value = !isCollapsed.value; }
 </script>

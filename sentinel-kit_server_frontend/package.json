@@ -9,9 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@guolao/vue-monaco-editor": "^1.6.0",
     "@tailwindcss/vite": "^4.1.14",
+    "monaco-editor": "^0.54.0",
+    "monaco-yaml": "^5.4.0",
     "tailwindcss": "^4.1.14",
+    "vite-plugin-monaco-editor": "^1.1.0",
     "vue": "^3.5.22",
+    "vue-monaco": "^1.2.2",
     "vue-router": "^4.6.3"
   },
   "devDependencies": {

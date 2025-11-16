@@ -36,6 +36,25 @@ const router = createRouter({
             component: () => import('./views/Assets.vue'),
             meta: { requiresAuth: true }
         },
+        {
+            path: '/rules',
+            name: 'RulesList',
+            component: () => import('./views/RulesList.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/rules/:id',
+            name: 'RuleDetails',
+            component: () => import('./views/RuleDetails.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/rules/:id/edit',
+            name: 'RuleEdit',
+            component: () => import('./views/RuleEdit.vue'),
+            meta: { requiresAuth: true }
+        }
+
     ]
 });
 

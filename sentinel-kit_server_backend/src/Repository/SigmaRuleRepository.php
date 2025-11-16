@@ -17,8 +17,17 @@ class SigmaRuleRepository extends ServiceEntityRepository
         parent::__construct($registry, SigmaRule::class);
     }
 
- /**
-     * Récupère toutes les SigmaRules en joignant uniquement la SigmaRuleVersion la plus récente (basée sur createdOn).
+    /**
+     * Retrieve all sigma rules as array object without content
+     * @return array
+     */
+    public function summaryFindAll() : array{
+        $qb = $this->createQueryBuilder("r")->orderBy("r.title","ASC")->select("r.id","r.title","r.description","r.active","r.createdOn","r.createdOn");
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Retrieves all SigmaRules joining only the most recent SigmaRuleVersion (based on createdOn).
      *
      * @return SigmaRule[]
      */
@@ -42,29 +51,4 @@ class SigmaRuleRepository extends ServiceEntityRepository
             ->orderBy('r.title', 'ASC');
         return $qb->getQuery()->getResult();
     }
-
-    //    /**
-    //     * @return SigmaRule[] Returns an array of SigmaRule objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('s')
-    //            ->andWhere('s.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('s.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
-
-    //    public function findOneBySomeField($value): ?SigmaRule
-    //    {
-    //        return $this->createQueryBuilder('s')
-    //            ->andWhere('s.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
 }
