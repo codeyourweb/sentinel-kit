@@ -10,20 +10,16 @@
   },
   "dependencies": {
     "@guolao/vue-monaco-editor": "^1.6.0",
+    "@iconify/json": "^2.2.399",
+    "@iconify/tailwind4": "^1.0.6",
     "@tailwindcss/vite": "^4.1.14",
-    "monaco-editor": "^0.54.0",
-    "monaco-yaml": "^5.4.0",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "flyonui": "^2.4.1",
     "tailwindcss": "^4.1.14",
-    "vite-plugin-monaco-editor": "^1.1.0",
     "vue": "^3.5.22",
-    "vue-monaco": "^1.2.2",
     "vue-router": "^4.6.3"
   },
   "devDependencies": {
-    "@iconify/json": "^2.2.399",
-    "@iconify/tailwind4": "^1.0.6",
-    "@vitejs/plugin-vue": "^6.0.1",
-    "flyonui": "^2.4.1",
     "vite": "^7.1.7"
   }
 }
