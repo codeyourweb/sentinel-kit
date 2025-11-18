@@ -15,11 +15,21 @@
                     </span>
                 </RouterLink>
             </nav>
+
+
+            <button 
+                @click="logout"
+                class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150 ease-in-out flex items-center"
+                title="Log out"
+                >
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                Log out
+            </button>
+
+
         </aside>
 
         <div :class="{ 'ml-64': !isCollapsed, 'ml-20': isCollapsed }" class="flex-1 flex flex-col transition-all duration-300 ease-in-out">
-            <div v-if="isLoggedIn"><Header /></div>
-
             <main class="p-6 flex-1 overflow-y-auto">
                 <RouterView />
             </main>
@@ -29,9 +39,9 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
-import { RouterView, RouterLink } from 'vue-router';
-import Header from './components/Header.vue';
+import { useRouter, RouterView, RouterLink } from 'vue-router';
 
+const router = useRouter();
 const isLoggedIn = ref(false);
 const isCollapsed = ref(true);
 
@@ -39,6 +49,10 @@ onMounted(() => {
     const token = localStorage.getItem('auth_token');
     isLoggedIn.value = !!token;
 });
+
+const logout = () => {
+    router.push({ name: 'Logout' });
+};
 
 const menuItems = [
 { name: 'Home', icon: 'mdi-light--home', route: 'Home' },

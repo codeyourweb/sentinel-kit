@@ -53,6 +53,12 @@ const router = createRouter({
             name: 'RuleEdit',
             component: () => import('./views/RuleEdit.vue'),
             meta: { requiresAuth: true }
+        },
+        {
+            path: '/rules/create',
+            name: 'RuleCreate',
+            component: () => import('./views/RuleCreate.vue'),
+            meta: { requiresAuth: true }
         }
 
     ]
