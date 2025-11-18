@@ -58,37 +58,24 @@
     </div>
     
     <div class="rule-editing w-3/4 p-4">
-    <h3 class="text-left text-lg font-semibold mb-4 text-gray-700">{{details?.title }}</h3>
-      <div class="monaco-wrapper h-full border border-gray-300 rounded-lg overflow-hidden">
-        
-        <DiffEditor 
-          v-if="isDiffMode || (isLatestVersion(currentVersionId) && isLatestDiffToggled)"
-          :original="isLatestDiffToggled ? previousOfLatestContent : previousVersionContent"  
-          :modified="currentSelectedContent"   
-          language="yaml" 
-          theme="vs-light" 
-          :options="diffOptions"
-          class="monaco-container"
-        />
-
-        <VueMonacoEditor 
-          v-else
-          v-model:value="code" 
-          language="yaml" 
-          theme="vs-light" 
-          :options="editorOptions"
-          class="monaco-container"
-        />
-        
+      <h3 class="text-left text-lg font-semibold mb-4 text-gray-700">{{details?.title }}</h3>
+      
+      <RuleEditor 
+        v-model="code"
+        :is-diff-mode="isDiffMode"
+        :is-latest-diff-toggled="isLatestDiffToggled"
+        :original-content="isLatestDiffToggled ? previousOfLatestContent : previousVersionContent"
+        :read-only="isDiffMode || isLatestDiffToggled"
+        class="h-full"
+      />
       </div>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { DiffEditor, VueMonacoEditor } from '@guolao/vue-monaco-editor'; 
 import { useRoute } from 'vue-router';
+import RuleEditor from '../components/RuleEditor.vue';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const route = useRoute();
@@ -101,26 +88,6 @@ const currentSelectedContent = ref('');
 const previousVersionContent = ref(''); 
 const isDiffMode = ref(false); 
 const isLatestDiffToggled = ref(false); 
-
-const editorOptions = computed(() => ({
-  automaticLayout: true,
-  minimap: { enabled: true },
-  readOnly: false,
-  tabSize: 2,
-  scrollBeyondLastLine: false, 
-  wordWrap: 'on',
-}));
-
-const diffOptions = computed(() => ({
-  automaticLayout: true,
-  minimap: { enabled: true },
-  readOnly: true, 
-  tabSize: 2,
-  scrollBeyondLastLine: false, 
-  wordWrap: 'on',
-  renderSideBySide: true, 
-}));
-
 
 const latestVersionId = computed(() => {
     return details.value?.versions?.length > 0 ? details.value.versions[0].id : null;
@@ -168,11 +135,11 @@ const loadVersionContent = (version) => {
         isLatestDiffToggled.value = false;
     }
 
-    isDiffMode.value = !isLatest && !isInitial;
-
+    isDiffMode.value = !isLatest && !isInitial; 
+  
     if (isDiffMode.value && details.value?.versions) {
         const versions = details.value.versions;
-        const selectedIndex = versions.findIndex(v => v.id === version.id);
+        const selectedIndex = versions.findIndex(v => v.id === version.id); 
         const previousVersion = versions[selectedIndex + 1];
 
         if (previousVersion) {
@@ -187,42 +154,42 @@ const loadVersionContent = (version) => {
 
 
 const fetchRuleData = () => {
-  const ruleId = route.params.id; 
-  
-  if (!ruleId) {
-    console.error('Erreur: ID de la règle non trouvé.');
-    code.value = "Erreur de chargement: ID manquant.";
-    return;
-  }
-  
-  fetch(`${BASE_URL}/rules/sigma/${ruleId}/details`, {
-    method: 'GET',
-    headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-    },
-})
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP! Status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(data => {
-        details.value = data;
-
-        if (data && data.versions && data.versions.length > 0) {
-            const latestVersion = data.versions[0];
-            loadVersionContent(latestVersion);
-        } else {
-             details.value = { versions: [] };
-             code.value = "Aucune version de règle trouvée.";
+    const ruleId = route.params.id; 
+    
+    if (!ruleId) {
+      console.error('Erreur: ID de la règle non trouvé.');
+      code.value = "Erreur de chargement: ID manquant.";
+      return;
+    }
+    
+    fetch(`${BASE_URL}/rules/sigma/${ruleId}/details`, {
+      method: 'GET',
+      headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      },
+  })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP! Status: ${response.status}`);
         }
-    })
-    .catch(error => {
-      console.error('Error while retrieving rule\'s data:', error);
-      code.value = `Error loading: ${error.message}`;
-    });
+        return response.json();
+      })
+      .then(data => {
+          details.value = data;
+
+          if (data && data.versions && data.versions.length > 0) {
+              const latestVersion = data.versions[0];
+              loadVersionContent(latestVersion);
+          } else {
+              details.value = { versions: [] };
+              code.value = "Aucune version de règle trouvée.";
+          }
+      })
+      .catch(error => {
+        console.error('Error while retrieving rule\'s data:', error);
+        code.value = `Error loading: ${error.message}`;
+      });
 };
 
 onMounted(fetchRuleData);
@@ -231,10 +198,5 @@ onMounted(fetchRuleData);
 <style scoped>
 .h-screen-minus-header {
   height: calc(100vh - 64px); 
-}
-
-.monaco-container {
-  height: 100%;
-  width: 100%;
 }
 </style>

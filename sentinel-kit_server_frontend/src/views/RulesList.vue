@@ -1,5 +1,7 @@
 <template>
-    <h1 class="text-left mb-4">Detection rules list</h1>
+    <button class="btn btn-primary float-right mb-4" @click="$router.push({ name: 'RuleCreate' })">Create new rule</button>
+    <h1 class="text-left mb-4 float-left">Detection rules list</h1>
+    <br class="clear-both" />
     <div v-if="rules.length > 0" class="space-y-4">
         <div class="flex flex-wrap items-center gap-4 p-4 border rounded-lg bg-gray-50 shadow-sm">
             
