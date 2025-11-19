@@ -1,5 +1,6 @@
 <template>
     <div class="flex h-screen w-screen bg-gray-50">
+        <!-- Side menu -->
         <aside v-if="isLoggedIn" :class="{ 'w-64': !isCollapsed, 'w-20': isCollapsed }" class="flex flex-col bg-gray-800 text-white transition-all duration-300 ease-in-out shadow-lg fixed h-full z-20">
             <div class="p-4 flex justify-end">
                 <button @click="isCollapsed = !isCollapsed" class="p-2 rounded-full hover:bg-gray-700 transition duration-150" :title="isCollapsed ? 'Développer' : 'Réduire'">
@@ -7,9 +8,10 @@
                     <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
                 </button>
             </div>
+            <img src="/images/sentinel-kit_logo.png" alt="Sentinel Kit Logo" class="mx-auto mt-6 mb-6" :class="{ 'w-12 h-12': isCollapsed, 'w-24 h-24': !isCollapsed }" />
             <nav class="flex-grow space-y-2 p-3">
-                <RouterLink v-for="item in menuItems" :key="item.name" :to="{ name: item.route }" class="flex items-center p-3 rounded-lg hover:bg-gray-700 transition duration-150 group" :class="{ 'justify-center': isCollapsed }" :title="isCollapsed ? item.name : ''">
-                    <span :class="`w-6 h-6 flex-shrink-0 icon-[${item.icon}] size-10 bg-white`"></span>
+                <RouterLink v-for="item in menuItems" :key="item.name" :to="{ name: item.route }" class="flex items-center p-3 rounded-lg hover:bg-gray-400 transition duration-150 group text-white" :class="{ 'justify-center': isCollapsed }" :title="isCollapsed ? item.name : ''">
+                    <span :class="`text-white bg-gray-300 w-6 h-6 flex-shrink-0 ${item.icon} size-10`"></span>
                     <span v-if="!isCollapsed" class="ml-4 font-medium whitespace-nowrap overflow-hidden">
                         <RouterLink :key="item.name" :to="{ name: item.route }" class="link link-primary [--link-color:orange]">{{ item.name }}</RouterLink>
                     </span>
@@ -23,7 +25,7 @@
                 title="Log out"
                 >
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                Log out
+                <span v-if="!isCollapsed" class="whitespace-nowrap">Log out</span>
             </button>
 
 
@@ -31,8 +33,76 @@
 
         <div :class="{ 'ml-64': !isCollapsed, 'ml-20': isCollapsed }" class="flex-1 flex flex-col transition-all duration-300 ease-in-out">
             <main class="p-6 flex-1 overflow-y-auto">
-                <RouterView />
+                <RouterView @show-notification="showNotification" />
             </main>
+        </div>
+
+        <!-- Notification Modal -->
+        <div 
+            v-if="notification.visible" 
+            class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md w-full mx-4"
+        >
+            <div 
+                class="rounded-lg shadow-lg transition-all duration-300 ease-in-out transform overflow-hidden"
+                :class="{
+                    'bg-blue-100 border-l-4 border-blue-500': notification.type === 'info',
+                    'bg-yellow-100 border-l-4 border-yellow-500': notification.type === 'warning',
+                    'bg-red-100 border-l-4 border-red-500': notification.type === 'error'
+                }"
+            >
+                <div class="p-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <span 
+                                class="w-6 h-6"
+                                :class="{
+                                    'icon-[material-symbols--info] text-blue-500 bg-blue-400': notification.type === 'info',
+                                    'icon-[material-symbols--warning] text-yellow-500 bg-yellow-400': notification.type === 'warning',
+                                    'icon-[material-symbols--error] text-red-500 bg-red-400': notification.type === 'error'
+                                }"
+                            ></span>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <p 
+                                class="text-sm font-medium"
+                                :class="{
+                                    'text-blue-800': notification.type === 'info',
+                                    'text-yellow-800': notification.type === 'warning',
+                                    'text-red-800': notification.type === 'error'
+                                }"
+                            >
+                                {{ notification.message }}
+                            </p>
+                        </div>
+                        <div class="ml-4 flex-shrink-0">
+                            <a
+                                @click="hideNotification"
+                                class="btn-btn-sm btn-primary inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2"
+                                :class="{
+                                    'text-blue-400 hover:bg-blue-200 focus:ring-blue-600': notification.type === 'info',
+                                    'text-yellow-400 hover:bg-yellow-200 focus:ring-yellow-600': notification.type === 'warning',
+                                    'text-red-400 hover:bg-red-200 focus:ring-red-600': notification.type === 'error'
+                                }"
+                            >
+                                <span class="sr-only">Close</span>
+                                <span class="icon-[material-symbols--close] w-4 h-4"></span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- notification progress-bar -->
+                <div class="h-1 w-full relative overflow-hidden">
+                    <div 
+                        class="h-full progress-bar"
+                        :class="{
+                            'bg-blue-600': notification.type === 'info',
+                            'bg-yellow-600': notification.type === 'warning',
+                            'bg-red-600': notification.type === 'error'
+                        }"
+                    ></div>
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -45,6 +115,40 @@ const router = useRouter();
 const isLoggedIn = ref(false);
 const isCollapsed = ref(true);
 
+// Notification system
+const notification = ref({
+    visible: false,
+    type: 'info', // 'info', 'warning', 'error'
+    message: ''
+});
+
+let notificationTimer = null;
+
+const showNotification = ({ type, message }) => {
+    if (notificationTimer) {
+        clearTimeout(notificationTimer);
+    }
+    
+    notification.value = {
+        visible: true,
+        type,
+        message
+    };
+    
+    // Auto-hide after 15 seconds
+    notificationTimer = setTimeout(() => {
+        hideNotification();
+    }, 15000);
+};
+
+const hideNotification = () => {
+    notification.value.visible = false;
+    if (notificationTimer) {
+        clearTimeout(notificationTimer);
+        notificationTimer = null;
+    }
+};
+
 onMounted(() => {
     const token = localStorage.getItem('auth_token');
     isLoggedIn.value = !!token;
@@ -54,13 +158,30 @@ const logout = () => {
     router.push({ name: 'Logout' });
 };
 
+// Side menu items
 const menuItems = [
-{ name: 'Home', icon: 'mdi-light--home', route: 'Home' },
-{ name: 'Dashboard', icon: 'svg-spinners--blocks-wave', route: 'Home' },
-{ name: 'Assets & groups', icon: 'line-md--computer-twotone', route: 'Home' },
-{ name: 'Rulesets', icon: 'mdi--account-child', route: 'RulesList' },
-{ name: 'Detections', icon: 'shield', route: 'Home' },
-{ name: 'Users', icon: 'line-md--account', route: 'Home' },
-{ name: 'Settings', icon: 'settings', route: 'Home' }
+{ name: 'Home', icon: 'icon-[svg-spinners--blocks-wave]', route: 'Home' },
+{ name: 'Dashboard', icon: 'icon-[solar--presentation-graph-bold]', route: 'Home' },
+{ name: 'Assets & groups', icon: 'icon-[line-md--computer-twotone]', route: 'Home' },
+{ name: 'Rulesets', icon: 'icon-[mdi--account-child]', route: 'RulesList' },
+{ name: 'Detections', icon: 'icon-[solar--eye-scan-broken]', route: 'Home' },
+{ name: 'Users', icon: 'icon-[line-md--account]', route: 'Home' },
+{ name: 'Settings', icon: 'icon-[solar--settings-bold-duotone]', route: 'Home' }
 ];
 </script>
+
+<style scoped>
+.progress-bar {
+    width: 100%;
+    animation: progress-countdown 15s linear forwards;
+}
+
+@keyframes progress-countdown {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}
+</style>
