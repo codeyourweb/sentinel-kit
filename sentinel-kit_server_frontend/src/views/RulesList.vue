@@ -33,7 +33,13 @@
 
     <ul class="mt-6 space-y-3">
         <li v-for="rule in paginatedRules" :key="rule.id">
-            <RuleSummary :rule="rule" @update:ruleStatus="handleStatusUpdate" />
+            <RuleSummary 
+                :rule="rule" 
+                :isDeleting="deletingRules.has(rule.id)"
+                @update:ruleStatus="handleStatusUpdate" 
+                @deleteRule="handleDeleteRule"
+                @show-notification="(notification) => emit('show-notification', notification)"
+            />
         </li>
     </ul>
 
@@ -75,7 +81,10 @@
 
 <script setup>
 import RuleSummary from '../components/RuleSummary.vue';
-import { ref, computed } from 'vue';
+import { ref, computed, defineEmits } from 'vue';
+
+const emit = defineEmits(['show-notification']);
+
 const rules = ref([]);
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -83,12 +92,54 @@ const pageSize = ref(20);
 const currentPage = ref(1);
 const searchQuery = ref('');
 const sortKey = ref('title');
+const deletingRules = ref(new Set());
 
 const handleStatusUpdate = ({ ruleId, newStatus }) => {
     if (sortKey.value === 'active') {
         const currentSortKey = sortKey.value;
         sortKey.value = '';
         sortKey.value = currentSortKey;
+    }
+};
+
+const handleDeleteRule = async (ruleId) => {
+    deletingRules.value.add(ruleId);
+    
+    try {
+        const response = await fetch(`${BASE_URL}/rules/sigma/${ruleId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const ruleIndex = rules.value.findIndex(rule => rule.id === ruleId);
+            if (ruleIndex !== -1) {
+                const deletedRule = rules.value[ruleIndex];
+                rules.value.splice(ruleIndex, 1);
+                
+                emit('show-notification', {
+                    type: 'info',
+                    message: `Rule "${deletedRule.title}" deleted successfully`
+                });
+            }
+        } else {
+            const errorData = await response.json().catch(() => ({}));
+            emit('show-notification', {
+                type: 'error',
+                message: `Error deleting rule: ${errorData.message || 'Unknown error'}`
+            });
+        }
+    } catch (error) {
+        console.error('Error deleting rule:', error);
+        emit('show-notification', {
+            type: 'error',
+            message: 'Network error while deleting the rule'
+        });
+    } finally {
+        deletingRules.value.delete(ruleId);
     }
 };
 

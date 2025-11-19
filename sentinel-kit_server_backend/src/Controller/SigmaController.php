@@ -53,4 +53,17 @@ class SigmaController extends AbstractController{
         $serializedRule = $this->serializer->serialize($rule, 'json', ['groups' => ['rule_details']]);
         return new JsonResponse($serializedRule, Response::HTTP_OK, [], true);
     }
+
+    #[Route('api/rules/sigma/{ruleId}', name:'app_sigma_delete_rule', methods: ['DELETE'])]
+    public function deleteRule(Request $request, int $ruleId): Response {
+        $rule = $this->entityManger->getRepository(SigmaRule::class)->find($ruleId);
+        if (!$rule) {
+            return new JsonResponse(['error' => 'Rule not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->entityManger->remove($rule);
+        $this->entityManger->flush();
+
+        return new JsonResponse(['message' => 'Rule deleted successfully'], Response::HTTP_OK);
+    }
 }

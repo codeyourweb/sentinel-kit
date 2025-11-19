@@ -1,43 +1,57 @@
 <template>
-    <div class="rule-summary border-2 border-gray-200 p-4 mb-3 rounded-lg">
+    <div 
+        class="rule-summary border-l-4 p-4 mb-4 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md"
+        :class="{
+            'border-green-500 bg-white hover:bg-gray-50': props.rule.active && !props.isDeleting,
+            'border-gray-400 bg-gray-100 hover:bg-gray-200': !props.rule.active && !props.isDeleting,
+            'border-gray-300 bg-gray-200 opacity-50 cursor-not-allowed': props.isDeleting
+        }"
+    >
         
-        <div class="flex justify-between items-center mb-2">
+        <div class="flex justify-between items-center mb-3">
             
-            <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-3 min-w-0">
                 
                 <RouterLink
                     :to="{ name: 'RuleEdit', params: { id: props.rule.id } }"
-                    class="btn btn-secondary w-6 h-6"
+                    class="p-2 rounded-full text-indigo-600 hover:bg-indigo-100 transition duration-150"
+                    :class="{ 'pointer-events-none opacity-50': props.isDeleting }"
                     aria-label="Edit rule"
+                    title="Edit rule"
                 >
-                <button 
-                    @click="viewDetails" 
-                    class="btn btn-primary w-6 h-6"
-                    aria-label="View rule details"
-                    >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                    </svg>
-                </button>
+                    <span class="icon-[solar--clapperboard-edit-bold] w-5 h-5"></span> 
                 </RouterLink>
-                <h2 class="text-lg font-semibold m-0">
-                    {{ props.rule.title }}
+                
+                <h2 class="text-xl font-bold truncate">
+                    <RouterLink 
+                        :to="{ name: 'RuleEdit', params: { id: props.rule.id } }" 
+                        class="text-gray-800 hover:text-indigo-600 transition duration-150"
+                        :class="{ 'pointer-events-none text-gray-400': props.isDeleting }"
+                    >
+                        {{ props.rule.title }}
+                        <span v-if="props.isDeleting" class="ml-2 text-sm text-red-500 font-normal">
+                            (Deleting rule...)
+                        </span>
+                    </RouterLink>
                 </h2>
             </div>
-            <div class="flex items-center space-x-4">          
+            
+            <div class="flex items-center space-x-4 flex-shrink-0">
+                
+
+
                 <div class="relative w-16 h-6 flex items-center justify-end">
                     
                     <div v-if="isUpdating" class="flex items-center space-x-2">
-                        <div class="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                        <span class="text-xs text-gray-500">Wait...</span>
+                        <span class="icon-[svg-spinners--ring-resize] w-6 h-6 text-blue-500 animate-spin"></span>
                     </div>
 
-                    <label v-else class="relative inline-flex items-center cursor-pointer">
+                    <label v-else class="relative inline-flex items-center cursor-pointer" :class="{ 'opacity-50 pointer-events-none': props.isDeleting }">
                         <input 
                             type="checkbox" 
                             class="sr-only peer" 
                             :checked="props.rule.active"
+                            :disabled="props.isDeleting"
                             @change="toggleStatus" 
                         />
                         
@@ -47,27 +61,102 @@
                     </label>
                 </div>
             </div>
+        </div>
+        
+        <p class="text-sm text-gray-600 mb-4 text-justify">{{ shortDescription }}</p>
+        
+        <div class="flex justify-between items-center">
+            
+            <div class="flex space-x-4 text-xs text-gray-500 font-medium">
+                <span class="mr-6">Detections: </span>
+                <span class="flex items-center space-x-1">
+                    <span class="icon-[solar--clock-circle-broken] w-4 h-4 text-blue-500"></span>
+                    <span class="font-bold text-gray-700">{{ props.rule.detections_24h || 0 }}</span>
+                    <span>(24h)</span>
+                </span>
+                <span class="flex items-center space-x-1">
+                    <span class="icon-[solar--calendar-mark-bold] w-4 h-4 text-blue-500"></span>
+                    <span class="font-bold text-gray-700">{{ props.rule.detections_7d || 0 }}</span>
+                    <span>(7j)</span>
+                </span>
+                <span class="flex items-center space-x-1">
+                    <span class="icon-[solar--calendar-bold] w-4 h-4 text-blue-500"></span>
+                    <span class="font-bold text-gray-700">{{ props.rule.detections_30d || 0 }}</span>
+                    <span>(30j)</span>
+                </span>
             </div>
 
-        <p class="text-gray-700 text-justify">{{ shortDescription }}</p>
+            <button
+                @click="showDeleteConfirmation = true"
+                :disabled="props.isDeleting"
+                class="btn btn-soft btn-error btn-sm flex items-center text-sm font-medium text-red-600 hover:bg-red-50 p-2 rounded-lg transition duration-150"
+                :class="{ 'opacity-50 cursor-not-allowed': props.isDeleting }"
+                title="Delete Rule"
+            >
+                <span class="icon-[material-symbols--delete-outline] bg-red-600 w-5 h-5 mr-1 text-red-200"></span>
+                {{ props.isDeleting ? 'Deleting...' : 'Delete' }}
+            </button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal Overlay -->
+    <div 
+        v-if="showDeleteConfirmation" 
+        class="flex fixed inset-0 bg-gray-200 bg-opacity-80 backdrop-opacity-80 items-center justify-center z-50"
+        @click="showDeleteConfirmation = false"
+    >
+        <div 
+            class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl"
+            @click.stop
+        >
+            <div class="flex items-center mb-4">
+                <span class="icon-[material-symbols--warning] w-6 h-6 text-red-500 mr-3"></span>
+                <h3 class="text-lg font-semibold text-gray-900">Confirm deletion</h3>
+            </div>
+            
+            <p class="text-gray-600 mb-6">
+                Are you sure you want to delete the rule "<strong>{{ props.rule.title }}</strong>"? 
+                This action is irreversible.
+            </p>
+            
+            <div class="flex justify-end space-x-3">
+                <a
+                    @click="showDeleteConfirmation = false"
+                    class="btn btn-error px-4 py-2 text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition duration-150"
+                >
+                    Cancel
+                </a>
+                <a
+                    @click="confirmDelete"
+                    class="btn btn-primary px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition duration-150"
+                >
+                    Remove
+                </a>
+            </div>
+        </div>
     </div>
 </template>
 
 <script setup>
 import { computed, ref, defineEmits } from 'vue'; 
-import RuleEdit from '../views/RuleEdit.vue';
+import { RouterLink } from 'vue-router';
 
-const emit = defineEmits(['update:ruleStatus', 'showDetails']);
+const emit = defineEmits(['update:ruleStatus', 'showDetails', 'deleteRule']); 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const props = defineProps({
     rule: {
         type: Object,
         required: true
+    },
+    isDeleting: {
+        type: Boolean,
+        default: false
     }
 });
 
 const isUpdating = ref(false); 
+const showDeleteConfirmation = ref(false); 
 
 const shortDescription = computed(() => {
     const maxChars = 300;
@@ -78,10 +167,6 @@ const shortDescription = computed(() => {
     }
     return description;
 });
-
-const viewDetails = () => {
-    emit('showDetails', props.rule.id);
-};
 
 const toggleStatus = async () => {
     if (isUpdating.value) return;
@@ -100,8 +185,7 @@ const toggleStatus = async () => {
         });
 
         if (response.ok) {
-            props.rule.active = newStatus;
-            emit('update:ruleStatus', { ruleId: props.rule.id, newStatus: newStatus });
+            props.rule.active = newStatus; 
         } else {
             console.error('API update failed:', await response.text());
         }
@@ -112,11 +196,9 @@ const toggleStatus = async () => {
         isUpdating.value = false;
     }
 };
-</script>
 
-<style scoped>
-.rule-summary h2 {
-    margin-top: 0;
-    margin-bottom: 0;
-}
-</style>
+const confirmDelete = () => {
+    showDeleteConfirmation.value = false;
+    emit('deleteRule', props.rule.id);
+};
+</script>
