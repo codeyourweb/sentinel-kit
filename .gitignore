@@ -14,6 +14,7 @@
 /data/log_ingest_data/evtx/*
 /data/log_ingest_data/auditd/*
 /data/log_ingest_data/json/*
+/data/log_ingest_data/csv/*
 /data/mysql_data/*
 /data/yara_triage_data/*
 /docs/graphs/*.bkp
