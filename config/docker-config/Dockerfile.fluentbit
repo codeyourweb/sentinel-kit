@@ -3,10 +3,12 @@ FROM ubuntu:24.04
 RUN mkdir -p fluent-bit /fluent-bit/etc /fluent-bit/scripts /fluent-bit/logs /fluent-bit/database
 WORKDIR /fluent-bit
 COPY config/docker-config/fluentbit-evtx-dump.sh /fluent-bit/scripts/fluentbit-evtx-dump.sh
-RUN chmod +x /fluent-bit/scripts/fluentbit-evtx-dump.sh
+COPY config/docker-config/fluentbit-csv-dump.sh /fluent-bit/scripts/fluentbit-csv-dump.sh
+RUN chmod +x /fluent-bit/scripts/fluentbit-evtx-dump.sh && \
+    chmod +x /fluent-bit/scripts/fluentbit-csv-dump.sh
 
 RUN apt update && \
-    apt install -y curl ca-certificates dpkg gnupg dpkg-dev && \
+    apt install -y curl ca-certificates dpkg gnupg dpkg-dev python3 && \
     curl -L -o /tmp/fluentbit.key https://packages.fluentbit.io/fluentbit.key && \
     gpg --dearmor < /tmp/fluentbit.key > /usr/share/keyrings/fluentbit-keyring.gpg && \
     rm /tmp/fluentbit.key && \
