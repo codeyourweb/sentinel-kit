@@ -17,3 +17,6 @@ scrape_configs:
   - job_name: 'mysql'
     static_configs:
       - targets: ['sentinel-kit-utils-mysql-exporter:9104']
+  - job_name: 'rules-scanner'
+    static_configs:
+      - targets: ['sentinel-kit-app-rules-scanner:9091']

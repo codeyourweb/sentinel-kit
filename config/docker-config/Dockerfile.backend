@@ -4,17 +4,26 @@ RUN apk update && \
     apk add --no-cache icu-dev zip libzip-dev bash && \
     docker-php-ext-install intl pdo pdo_mysql zip
 
-RUN apk add --no-cache libpng-dev libjpeg-turbo-dev libwebp-dev libxpm-dev freetype-dev && \
+RUN apk add --no-cache libpng-dev libjpeg-turbo-dev libwebp-dev libxpm-dev freetype-dev python3 pipx && \
     docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp --with-xpm && \
     docker-php-ext-install gd
+
+RUN export PIPX_GLOBAL_HOME=/opt/pipx && export PIPX_GLOBAL_BIN_DIR=/usr/local/bin
+
+RUN pipx ensurepath && pipx install sigma-cli --global && \
+    /usr/local/bin/sigma plugin install elasticsearch
+
+RUN mkdir /detection-rules
 
 COPY config/docker-config/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 
 RUN curl -1sLf 'https://dl.cloudsmith.io/public/symfony/stable/setup.alpine.sh' | bash && \
     apk add symfony-cli
 
-RUN cd /var/www/html && \
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
+RUN chown -R www-data:www-data /var/www/html && chown -R www-data:www-data /detection-rules
+# Note: We start as root to fix permissions of mounted volumes, then switch to www-data in entrypoint
 WORKDIR /var/www/html
-CMD ["php-fpm"]
+
+ENTRYPOINT ["/bin/sh", "-c", "/opt/server-backend/backend-entrypoint.sh"]

@@ -1,0 +1,50 @@
+# Default shared configuration for all Elastalert rules
+# This file can be imported in other rules with "import:" 
+
+# Elasticsearch connection parameters
+es_conn_timeout: 30
+max_query_size: 1000
+
+# Timing parameters
+buffer_time:
+  minutes: 1
+realert:
+  minutes: 1
+
+# Index parameters
+use_strftime_index: false
+timestamp_field: '@timestamp'
+
+# Alert parameters
+priority: 1
+type: any
+
+# Fields to include in alerts
+include:
+  - _index
+  - _id
+  - '@timestamp'
+  - source
+  - message
+
+# Default alert template
+alert_text: |
+  🚨 Sentinel-Kit Alert
+  =====================
+  Rule: {rule_name}
+  Index: {0}
+  Document ID: {1}
+  Timestamp: {2}
+  Source: {3}
+  Message: {4}
+  
+alert_text_args:
+  - _index
+  - _id
+  - '@timestamp'
+  - source
+  - message
+
+# Configuration for debug alerts
+alert:
+  - debug
