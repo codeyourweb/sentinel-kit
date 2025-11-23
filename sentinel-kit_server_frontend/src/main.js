@@ -37,6 +37,12 @@ const router = createRouter({
             meta: { requiresAuth: true }
         },
         {
+            path: '/grafana',
+            name: 'Grafana',
+            component: () => import('./views/Grafana.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
             path: '/assets',
             name: 'Assets',
             component: () => import('./views/Assets.vue'),

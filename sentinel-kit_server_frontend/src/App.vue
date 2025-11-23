@@ -1,4 +1,6 @@
 <template>
+    <SSLChecker />
+    
     <div class="flex h-screen w-screen bg-gray-50">
         <!-- Side menu -->
         <aside v-if="isLoggedIn" :class="{ 'w-64': !isCollapsed, 'w-20': isCollapsed }" class="flex flex-col bg-gray-800 text-white transition-all duration-300 ease-in-out shadow-lg fixed h-full z-20">
@@ -112,6 +114,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { useRouter, RouterView, RouterLink } from 'vue-router';
+import SSLChecker from './components/SSLChecker.vue';
 
 const router = useRouter();
 const isLoggedIn = ref(false);
@@ -163,11 +166,11 @@ const logout = () => {
 // Side menu items
 const menuItems = [
 { name: 'Home', icon: 'icon-[svg-spinners--blocks-wave]', route: 'Home' },
-{ name: 'Kibana', icon: 'icon-[solar--presentation-graph-bold]', route: 'Kibana' },
+{ name: 'Logs', icon: 'icon-[solar--presentation-graph-bold]', route: 'Kibana' },
 { name: 'Rulesets', icon: 'icon-[mdi--account-child]', route: 'RulesList' },
 { name: 'Detections', icon: 'icon-[solar--eye-scan-broken]', route: 'Home' },
 { name: 'Assets & groups', icon: 'icon-[line-md--computer-twotone]', route: 'Home' },
-{ name: 'Settings', icon: 'icon-[solar--settings-bold-duotone]', route: 'Home' }
+{ name: 'Monitoring', icon: 'icon-[material-symbols--monitor-heart-outline]', route: 'Grafana' }
 ];
 </script>
 

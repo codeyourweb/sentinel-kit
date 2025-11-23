@@ -1,6 +1,12 @@
 <template>
     <h1 class="text-4xl font-extrabold text-gray-900 text-left m-4">Quickstart</h1>
 
+    <!-- Services Status Panel -->
+    <div class="mb-8 px-4">
+        <h2 class="text-2xl font-bold text-gray-800 text-left mb-4">Services Status</h2>
+        <ServiceStatus />
+    </div>
+
     <h2 class="text-2xl font-bold text-gray-800 text-left m-2 pl-4">configure & deploy</h2>
 
     <!-- Quickstart group -->
@@ -90,6 +96,10 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import ServiceStatus from '../components/ServiceStatus.vue';
+
+const emit = defineEmits(['show-notification']);
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const router = useRouter();
 
