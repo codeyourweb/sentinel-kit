@@ -8,11 +8,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-const kibanaUrl = ref('about:blank');
+
+const emit = defineEmits(['show-notification']);
+
+const kibanaUrl = ref(import.meta.env.VITE_KIBANA_URL);
 onMounted(async () => {
 
 try{
-    const response = await fetch('https://kibana.sentinel-kit.local/internal/security/login', {
+    const response = await fetch(kibanaUrl.value, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

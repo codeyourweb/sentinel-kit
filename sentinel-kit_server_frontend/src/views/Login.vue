@@ -8,6 +8,8 @@ import { ref } from 'vue';
 import LoginOTPForm from '../components/LoginOTPForm.vue';
 import LoginPasswordForm from '../components/LoginPasswordForm.vue';
 
+const emit = defineEmits(['show-notification']);
+
 const otpUrl = ref(null);
 const otpKey = ref(null);
 

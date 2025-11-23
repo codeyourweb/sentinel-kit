@@ -29,7 +29,7 @@ const router = useRouter();
 
 const isInvalid = ref(false);
 const otp = ref(['', '', '', '', '', '']);
-const emit = defineEmits(['postauth-success']);
+const emit = defineEmits(['postauth-success', 'showNotification']);
 const props = defineProps({
     postAuthUrl: {
         type: String,

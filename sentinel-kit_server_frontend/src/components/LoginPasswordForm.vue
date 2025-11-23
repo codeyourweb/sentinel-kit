@@ -24,7 +24,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const email = ref('');
 const password = ref('');
 const isInvalid = ref(false);
-const emit = defineEmits(['preauth-success']);
+const emit = defineEmits(['preauth-success', 'showNotification']);
 
 watch([email, password], () => {
     isInvalid.value = false;
