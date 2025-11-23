@@ -1,7 +1,12 @@
 #!/bin/sh
-MARKER_FILE="/opt/server-backend/.initial_setup_done"
+chown -R www-data:www-data /var/www/html
+chown -R www-data:www-data /detection-rules
+
+su -s /bin/sh www-data << 'EOF'
+MARKER_FILE="/var/www/html/.initial_setup_done"
 rm -rf /var/www/html/var/cache
 rm -rf /var/www/html/public/bundles
+rm -rf /detection-rules/elastalert/*
 composer install
 if [ ! -f "$MARKER_FILE" ]; then
 echo "Running initial setup..."
@@ -16,3 +21,4 @@ touch "$MARKER_FILE"
 fi
 echo "Starting Symfony server..."
 symfony server:start --allow-http --port=8000 --listen-ip='0.0.0.0'
+EOF

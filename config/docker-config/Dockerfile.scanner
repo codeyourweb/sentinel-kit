@@ -1,0 +1,35 @@
+FROM python:3.12-alpine
+
+RUN apk update \
+    && apk add --no-cache \
+       bash \
+       git \
+       pipx \
+       build-base \
+       mysql-client \
+       mysql-dev \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+RUN adduser -D appuser
+
+RUN export PIPX_GLOBAL_HOME=/opt/pipx && export PIPX_GLOBAL_BIN_DIR=/usr/local/bin
+
+RUN pipx ensurepath && pipx install sigma-cli --global && \
+    /usr/local/bin/sigma plugin install elasticsearch && \
+    pip install --upgrade pip && \
+    pip install setuptools wheel PyYAML requests urllib3 && \
+    git clone https://github.com/jertel/elastalert2.git && \
+    cd elastalert2 && \
+    pip install -r requirements.txt && \
+    python setup.py install
+
+COPY ./config/docker-config/scanner-entrypoint.sh /usr/local/bin/scanner-entrypoint.sh
+
+RUN chmod +x /usr/local/bin/scanner-entrypoint.sh
+
+RUN chown -R appuser:appuser /app    
+
+USER appuser
+
+ENTRYPOINT ["/bin/bash", "/usr/local/bin/scanner-entrypoint.sh"]

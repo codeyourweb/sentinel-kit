@@ -8,7 +8,9 @@
                     <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
                 </button>
             </div>
+            <RouterLink :to="{ name: 'Home' }" class="flex justify-center mb-4">
             <img src="/images/sentinel-kit_logo.png" alt="Sentinel Kit Logo" class="mx-auto mt-6 mb-6" :class="{ 'w-12 h-12': isCollapsed, 'w-24 h-24': !isCollapsed }" />
+            </RouterLink>
             <nav class="flex-grow space-y-2 p-3">
                 <RouterLink v-for="item in menuItems" :key="item.name" :to="{ name: item.route }" class="flex items-center p-3 rounded-lg hover:bg-gray-400 transition duration-150 group text-white" :class="{ 'justify-center': isCollapsed }" :title="isCollapsed ? item.name : ''">
                     <span :class="`text-white bg-gray-300 w-6 h-6 flex-shrink-0 ${item.icon} size-10`"></span>
@@ -161,11 +163,10 @@ const logout = () => {
 // Side menu items
 const menuItems = [
 { name: 'Home', icon: 'icon-[svg-spinners--blocks-wave]', route: 'Home' },
-{ name: 'Dashboard', icon: 'icon-[solar--presentation-graph-bold]', route: 'Home' },
-{ name: 'Assets & groups', icon: 'icon-[line-md--computer-twotone]', route: 'Home' },
+{ name: 'Kibana', icon: 'icon-[solar--presentation-graph-bold]', route: 'Kibana' },
 { name: 'Rulesets', icon: 'icon-[mdi--account-child]', route: 'RulesList' },
 { name: 'Detections', icon: 'icon-[solar--eye-scan-broken]', route: 'Home' },
-{ name: 'Users', icon: 'icon-[line-md--account]', route: 'Home' },
+{ name: 'Assets & groups', icon: 'icon-[line-md--computer-twotone]', route: 'Home' },
 { name: 'Settings', icon: 'icon-[solar--settings-bold-duotone]', route: 'Home' }
 ];
 </script>

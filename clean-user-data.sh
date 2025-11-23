@@ -1,6 +1,7 @@
 rm -f ./config/backend/.initial_setup_done
 rm -rf ./config/caddy_server/certificates/*
 rm -f ./sentinel-kit_server_backend/config/jwt/*.pem
+rm -f ./sentinel-kit_server_backend/.initial_setup_done
 rm -rf ./data/caddy_logs/*
 rm -rf ./data/ftp_data/*
 rm -rf ./data/grafana/*

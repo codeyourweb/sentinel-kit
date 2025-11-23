@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h3 class="text-left text-lg font-semibold mb-4 text-gray-700">New sigma rule creation</h3>
+    <h1 class="text-4xl font-extrabold text-gray-900 text-left m-4">New sigma rule</h1>
     <RuleEditor 
       v-model="newRuleContent"
       :read-only="false"

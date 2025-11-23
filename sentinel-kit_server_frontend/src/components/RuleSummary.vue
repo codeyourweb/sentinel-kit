@@ -19,7 +19,7 @@
                     aria-label="Edit rule"
                     title="Edit rule"
                 >
-                    <span class="icon-[solar--clapperboard-edit-bold] w-5 h-5"></span> 
+                    <span class="icon-[material-symbols--pageview-outline] w-5 h-5"></span> 
                 </RouterLink>
                 
                 <h2 class="text-xl font-bold truncate">
@@ -29,9 +29,6 @@
                         :class="{ 'pointer-events-none text-gray-400': props.isDeleting }"
                     >
                         {{ props.rule.title }}
-                        <span v-if="props.isDeleting" class="ml-2 text-sm text-red-500 font-normal">
-                            (Deleting rule...)
-                        </span>
                     </RouterLink>
                 </h2>
             </div>
@@ -86,16 +83,14 @@
                 </span>
             </div>
 
-            <button
-                @click="showDeleteConfirmation = true"
-                :disabled="props.isDeleting"
+            <a
+                @click.prevent="props.isDeleting ? null : showDeleteConfirmation = true"
                 class="btn btn-soft btn-error btn-sm flex items-center text-sm font-medium text-red-600 hover:bg-red-50 p-2 rounded-lg transition duration-150"
                 :class="{ 'opacity-50 cursor-not-allowed': props.isDeleting }"
                 title="Delete Rule"
             >
                 <span class="icon-[material-symbols--delete-outline] bg-red-600 w-5 h-5 mr-1 text-red-200"></span>
-                {{ props.isDeleting ? 'Deleting...' : 'Delete' }}
-            </button>
+            </a>
         </div>
     </div>
 
@@ -141,7 +136,7 @@
 import { computed, ref, defineEmits } from 'vue'; 
 import { RouterLink } from 'vue-router';
 
-const emit = defineEmits(['update:ruleStatus', 'showDetails', 'deleteRule']); 
+const emit = defineEmits(['update:ruleStatus', 'showDetails', 'deleteRule', 'show-notification']); 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const props = defineProps({

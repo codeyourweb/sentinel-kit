@@ -31,6 +31,12 @@ const router = createRouter({
             meta: { requiresAuth: true }
         },
         {
+            path: '/kibana',
+            name: 'Kibana',
+            component: () => import('./views/Kibana.vue'),
+            meta: { requiresAuth: true }
+        },
+        {
             path: '/assets',
             name: 'Assets',
             component: () => import('./views/Assets.vue'),

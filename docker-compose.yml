@@ -32,23 +32,51 @@ services:
       - DATAMONITOR_SERVER_TOKEN=${SENTINELKIT_DATAMONITOR_SERVER_TOKEN}
       - CORS_ALLOW_ORIGIN=https://${SENTINELKIT_FRONTEND_HOSTNAME}
       - FLUENTBIT_SERVER_URL=http://sentinel-kit-server-fluentbit:24224
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
     volumes:
       - ./config/docker-config/backend-entrypoint.sh:/usr/local/bin/backend-entrypoint.sh:ro
-      - ./config/backend/:/opt/server-backend:delegated
       - ./sentinel-kit_server_backend:/var/www/html:delegated
       - ./sentinel-kit_server_backend/public:/var/www/html/public:delegated
       - ./config/sigma_ruleset:/detection-rules/sigma
+      - ./config/elastalert_ruleset:/detection-rules/elastalert
       - sentinel-kit_certificates_jwt:/var/www/html/config/jwt
       - sentinel-kit_server_backend_vendor_cache:/var/www/html/vendor
       - sentinel-kit_server_backend_var_cache:/var/www/html/var
     stdin_open: true
     tty: true
-    command: >
-      sh -c "/usr/local/bin/backend-entrypoint.sh"
     networks:
       - sentinel-kit-network
     depends_on:
       - sentinel-kit-db-mysql
+
+  sentinel-kit-app-rules-scanner:
+    container_name: sentinel-kit-app-rules-scanner
+    hostname: sentinel-kit-app-rules-scanner
+    build:
+      context: .
+      dockerfile: config/docker-config/Dockerfile.scanner
+    restart: on-failure
+    user: "0"  # Run as root to access certificates
+    depends_on:
+      sentinel-kit-db-mysql:
+        condition: service_healthy
+      sentinel-kit-db-elasticsearch-es01:
+        condition: service_healthy
+    environment:
+      - ES_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - ELASTALERT_MODE=daemon
+    volumes:
+      - ./config/sigma_ruleset:/app/sigma_ruleset:ro
+      - ./config/elastalert/elastalert_config.yml:/app/elastalert_config.yml:ro
+      - ./config/elastalert_ruleset:/app/elastalert_ruleset
+      - sentinel-kit_certificates_elasticsearch:/app/certs:ro
+    stdin_open: true
+    tty: true
+    networks:
+      - sentinel-kit-network
 
   sentinel-kit-server-fluentbit:
     container_name: sentinel-kit-server-fluentbit
@@ -101,8 +129,15 @@ services:
     volumes:
       - sentinel-kit_db_mysql_data:/var/lib/mysql
       - ./config/mysql/init_mysqld_exporter.sh:/docker-entrypoint-initdb.d/init_mysqld_exporter.sh:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 80s
     networks:
       - sentinel-kit-network
+
 
   sentinel-kit-utils-phpmyadmin:
     container_name: sentinel-kit-utils-phpmyadmin
@@ -326,18 +361,15 @@ services:
   sentinel-kit-utils-elastic-exporter:
     hostname: sentinel-kit-utils-elastic-exporter
     container_name: sentinel-kit-utils-elastic-exporter
-    image: justwatch/elasticsearch_exporter:latest
+    image: prometheuscommunity/elasticsearch-exporter:latest
     restart: on-failure
-    environment:
-      - ES_URI=https://sentinel-kit-db-elasticsearch-es01:9200 
-      - ES_ALL=true
-      - ES_TIMEOUT=10s
-      - ES_SKIP_TLS_VERIFY=false
-      - ES_CA_PATH=/usr/share/exporter/ca/ca.crt
-      - ES_USERNAME=elastic 
-      - ES_PASSWORD=${ELASTICSEARCH_PASSWORD}
+    command:
+      - '--es.uri=https://elastic:${ELASTICSEARCH_PASSWORD}@sentinel-kit-db-elasticsearch-es01:9200'
+      - '--es.all'
+      - '--es.timeout=10s'
+      - '--es.ssl-skip-verify'
     volumes:
-      - sentinel-kit_certificates_elasticsearch:/usr/share/exporter/ca
+      - sentinel-kit_certificates_elasticsearch:/usr/share/exporter/ca:ro
     networks:
       - sentinel-kit-network
     depends_on:
