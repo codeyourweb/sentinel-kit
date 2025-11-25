@@ -1,0 +1,15 @@
+FROM node:24-alpine
+
+RUN apk add --no-cache nginx curl && npm install -g npm
+
+RUN mkdir -p /run/nginx /var/log/nginx && \
+    chown -R nginx:nginx /var/log/nginx /run/nginx
+
+COPY config/docker-config/frontend-nginx.conf /etc/nginx/nginx.conf
+
+COPY config/docker-config/frontend-entrypoint.sh /usr/local/bin/frontend-entrypoint.sh
+RUN chmod +x /usr/local/bin/frontend-entrypoint.sh
+
+WORKDIR /app
+
+ENTRYPOINT ["/usr/local/bin/frontend-entrypoint.sh"]

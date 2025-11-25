@@ -2,14 +2,14 @@
 /.env.local.php
 /.env.*.local
 /config/caddy_server/certificates/*
-/config/yara_ruleset/*
-/config/sigma_ruleset/*
 /config/elastalert_ruleset/*
 /config/backend/*
 /data/caddy_logs/*
 /data/ftp_data/*
 /data/grafana/*
 /data/kibana/*
+/data/rulesets/yara_ruleset/*
+/data/rulesets/sigma_ruleset/*
 /data/fluentbit_db/*
 /data/log_ingest_data/evtx/*
 /data/log_ingest_data/auditd/*
@@ -19,6 +19,7 @@
 /data/yara_triage_data/*
 /docs/graphs/*.bkp
 /sentinel-kit_server_frontend/node_modules/*
+/sentinel-kit_server_frontend/dist/*
 /sentinel-kit_server_frontend/package-lock.json
 /sentinel-kit_server_backend/composer.lock
 /sentinel-kit_server_backend/.initial_setup_done
