@@ -1,10 +1,13 @@
 services:
   sentinel-kit-app-frontend:
-    image: node:22-alpine
     container_name: sentinel-kit-app-frontend
     hostname: ${SENTINELKIT_FRONTEND_HOSTNAME}
+    build:
+      context: .
+      dockerfile: config/docker-config/Dockerfile.frontend
     working_dir: /app
     environment:
+      - APP_ENV=${APP_ENV}
       - VITE_ALLOWED_HOSTS=${SENTINELKIT_FRONTEND_HOSTNAME},${SENTINELKIT_BACKEND_HOSTNAME},${SENTINELKIT_KIBANA_HOSTNAME},${SENTINELKIT_GRAFANA_HOSTNAME}
       - VITE_API_BASE_URL=https://${SENTINELKIT_BACKEND_HOSTNAME}/api
       - VITE_BACKEND_URL=https://${SENTINELKIT_BACKEND_HOSTNAME}
@@ -12,7 +15,12 @@ services:
       - VITE_GRAFANA_URL=https://${SENTINELKIT_GRAFANA_HOSTNAME}
     volumes:
       - ./sentinel-kit_server_frontend:/app
-    command: sh -c "npm install && npm run dev -- --host '0.0.0.0' --port 3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     stdin_open: true
     tty: true
     restart: on-failure
@@ -29,6 +37,7 @@ services:
     working_dir: /var/www/html
     entrypoint: /usr/local/bin/backend-entrypoint.sh
     environment:
+      - APP_ENV=${APP_ENV}
       - JWT_PASSPHRASE=${BACKEND_JWT_PASSPHRASE}
       - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@sentinel-kit-db-mysql:3306/${MYSQL_DATABASE}?serverVersion=9.4.0&charset=utf8
       - DEFAULT_URI=https://${SENTINELKIT_BACKEND_HOSTNAME}
@@ -40,11 +49,17 @@ services:
       - ./config/docker-config/backend-entrypoint.sh:/usr/local/bin/backend-entrypoint.sh:ro
       - ./sentinel-kit_server_backend:/var/www/html:delegated
       - ./sentinel-kit_server_backend/public:/var/www/html/public:delegated
-      - ./config/sigma_ruleset:/detection-rules/sigma
+      - ./data/rulesets/sigma_ruleset:/detection-rules/sigma
       - ./config/elastalert_ruleset:/detection-rules/elastalert
       - sentinel-kit_certificates_jwt:/var/www/html/config/jwt
       - sentinel-kit_server_backend_vendor_cache:/var/www/html/vendor
       - sentinel-kit_server_backend_var_cache:/var/www/html/var
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     stdin_open: true
     tty: true
     networks:
@@ -72,10 +87,16 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - ELASTALERT_MODE=daemon
     volumes:
-      - ./config/sigma_ruleset:/app/sigma_ruleset:ro
+      - ./data/rulesets/sigma_ruleset:/app/sigma_ruleset:ro
       - ./config/elastalert/elastalert_config.yml:/app/elastalert_config.yml:ro
       - ./config/elastalert_ruleset:/app/elastalert_ruleset
       - sentinel-kit_certificates_elasticsearch:/app/certs:ro
+    healthcheck:
+      test: ["CMD", "sh", "-c", "pgrep -f 'python|elastalert' > /dev/null || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
     stdin_open: true
     tty: true
     networks:
@@ -100,6 +121,12 @@ services:
       - ./config/fluentbit_server:/fluent-bit/etc
       - ./data/log_ingest_data:/fluent-bit/logs
       - ./data/fluentbit_db:/fluent-bit/database
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2020/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - sentinel-kit-network
 
@@ -150,6 +177,12 @@ services:
     environment:
       PMA_HOST: sentinel-kit-db-mysql
       PMA_PORT: 3306
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - sentinel-kit-network
     depends_on:
@@ -175,6 +208,12 @@ services:
       - ./config/caddy_server/certificates:/data/caddy/pki/authorities/local
       - sentinel-kit_server_caddy_data:/data
       - sentinel-kit_server_caddy_config:/config
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2020/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - sentinel-kit-network
 
@@ -327,6 +366,12 @@ services:
     restart: on-failure
     volumes:
       - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - sentinel-kit-network
     profiles: ["internal-monitoring"]
@@ -344,6 +389,7 @@ services:
       - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
       - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
     environment:
+      - SENTINELKIT_GRAFANA_HOSTNAME=${SENTINELKIT_GRAFANA_HOSTNAME}
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
       - GF_SERVER_HTTP_PORT=3000
@@ -352,6 +398,12 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - sentinel-kit-network
     entrypoint: 

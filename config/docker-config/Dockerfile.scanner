@@ -8,6 +8,7 @@ RUN apk update \
        build-base \
        mysql-client \
        mysql-dev \
+       curl \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /app

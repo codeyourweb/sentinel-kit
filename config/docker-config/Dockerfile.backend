@@ -1,7 +1,7 @@
-FROM php:8.2-fpm-alpine
+FROM php:8.5-fpm-alpine
 
 RUN apk update && \
-    apk add --no-cache icu-dev zip libzip-dev bash && \
+    apk add --no-cache icu-dev zip libzip-dev bash nginx curl && \
     docker-php-ext-install intl pdo pdo_mysql zip
 
 RUN apk add --no-cache libpng-dev libjpeg-turbo-dev libwebp-dev libxpm-dev freetype-dev python3 pipx && \
@@ -22,8 +22,16 @@ RUN curl -1sLf 'https://dl.cloudsmith.io/public/symfony/stable/setup.alpine.sh' 
 
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
+COPY config/docker-config/nginx-backend.conf /etc/nginx/nginx.conf
+COPY config/docker-config/backend-php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+RUN mkdir -p /run/nginx /var/log/nginx && \
+    chown -R nginx:nginx /var/log/nginx /run/nginx
+
 RUN chown -R www-data:www-data /var/www/html && chown -R www-data:www-data /detection-rules
-# Note: We start as root to fix permissions of mounted volumes, then switch to www-data in entrypoint
+
+COPY config/docker-config/backend-entrypoint.sh /opt/server-backend/backend-entrypoint.sh
+RUN chmod +x /opt/server-backend/backend-entrypoint.sh
+
 WORKDIR /var/www/html
 
 ENTRYPOINT ["/bin/sh", "-c", "/opt/server-backend/backend-entrypoint.sh"]
