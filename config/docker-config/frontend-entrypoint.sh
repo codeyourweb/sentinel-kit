@@ -4,12 +4,12 @@ echo "=== Sentinel Kit Frontend Entrypoint ==="
 echo "Environment: $APP_ENV"
 
 echo "Installing npm dependencies..."
-npm install
 
 if [ "$APP_ENV" = "prod" ]; then
     echo "Starting frontend in PRODUCTION mode"
 
     if [ ! -d "/app/dist" ]; then
+        npm install
         echo "Building application for production..."
         npm run build
     fi
@@ -24,6 +24,7 @@ if [ "$APP_ENV" = "prod" ]; then
     
 else
     echo "Starting in DEVELOPMENT mode"
+    npm install
     echo "Starting Vite dev server on port 3000..."
     npm run dev -- --host '0.0.0.0' --port 3000
 fi

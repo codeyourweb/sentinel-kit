@@ -161,13 +161,29 @@
             
             <p class="text-gray-600 mb-6">
                 <span v-if="bulkActionModal.action === 'activate'">
-                    Are you sure you want to <strong>activate</strong> all {{ sortedAndFilteredRules.length }} filtered rules?
+                    <template v-if="getRulesCountForAction('activate') > 0">
+                        Are you sure you want to <strong>activate</strong> {{ getRulesCountForAction('activate') }} rule{{ getRulesCountForAction('activate') > 1 ? 's' : '' }}?
+                        <span v-if="getRulesCountForAction('activate') < sortedAndFilteredRules.length" class="text-sm text-gray-500">
+                            <br>({{ sortedAndFilteredRules.length - getRulesCountForAction('activate') }} rule{{ sortedAndFilteredRules.length - getRulesCountForAction('activate') > 1 ? 's are' : ' is' }} already active)
+                        </span>
+                    </template>
+                    <template v-else>
+                        All {{ sortedAndFilteredRules.length }} filtered rule{{ sortedAndFilteredRules.length > 1 ? 's are' : ' is' }} already <strong>active</strong>.
+                    </template>
                 </span>
                 <span v-else-if="bulkActionModal.action === 'deactivate'">
-                    Are you sure you want to <strong>deactivate</strong> all {{ sortedAndFilteredRules.length }} filtered rules?
+                    <template v-if="getRulesCountForAction('deactivate') > 0">
+                        Are you sure you want to <strong>deactivate</strong> {{ getRulesCountForAction('deactivate') }} rule{{ getRulesCountForAction('deactivate') > 1 ? 's' : '' }}?
+                        <span v-if="getRulesCountForAction('deactivate') < sortedAndFilteredRules.length" class="text-sm text-gray-500">
+                            <br>({{ sortedAndFilteredRules.length - getRulesCountForAction('deactivate') }} rule{{ sortedAndFilteredRules.length - getRulesCountForAction('deactivate') > 1 ? 's are' : ' is' }} already inactive)
+                        </span>
+                    </template>
+                    <template v-else>
+                        All {{ sortedAndFilteredRules.length }} filtered rule{{ sortedAndFilteredRules.length > 1 ? 's are' : ' is' }} already <strong>inactive</strong>.
+                    </template>
                 </span>
                 <span v-else-if="bulkActionModal.action === 'delete'">
-                    Are you sure you want to <strong>delete</strong> all {{ sortedAndFilteredRules.length }} filtered rules? 
+                    Are you sure you want to <strong>delete</strong> all {{ sortedAndFilteredRules.length }} filtered rule{{ sortedAndFilteredRules.length > 1 ? 's' : '' }}? 
                     <br><strong class="text-red-600">This action is irreversible.</strong>
                 </span>
             </p>
@@ -180,16 +196,23 @@
                     Cancel
                 </a>
                 <a
-                    @click="executeBulkAction"
-                    class="px-4 py-2 text-white rounded-lg transition duration-150 cursor-pointer"
+                    @click="(bulkActionModal.action === 'activate' && getRulesCountForAction('activate') === 0) || (bulkActionModal.action === 'deactivate' && getRulesCountForAction('deactivate') === 0) ? null : executeBulkAction"
+                    class="px-4 py-2 text-white rounded-lg transition duration-150"
                     :class="{
-                        'bg-green-600 hover:bg-green-700': bulkActionModal.action === 'activate',
-                        'bg-yellow-600 hover:bg-yellow-700': bulkActionModal.action === 'deactivate',
-                        'bg-red-600 hover:bg-red-700': bulkActionModal.action === 'delete'
+                        'bg-green-600 hover:bg-green-700 cursor-pointer': bulkActionModal.action === 'activate' && getRulesCountForAction('activate') > 0,
+                        'bg-yellow-600 hover:bg-yellow-700 cursor-pointer': bulkActionModal.action === 'deactivate' && getRulesCountForAction('deactivate') > 0,
+                        'bg-red-600 hover:bg-red-700 cursor-pointer': bulkActionModal.action === 'delete',
+                        'bg-gray-400 cursor-not-allowed': (bulkActionModal.action === 'activate' && getRulesCountForAction('activate') === 0) || (bulkActionModal.action === 'deactivate' && getRulesCountForAction('deactivate') === 0)
                     }"
                 >
-                    <span v-if="bulkActionModal.action === 'activate'">Activate All</span>
-                    <span v-else-if="bulkActionModal.action === 'deactivate'">Deactivate All</span>
+                    <span v-if="bulkActionModal.action === 'activate'">
+                        <template v-if="getRulesCountForAction('activate') > 0">Activate {{ getRulesCountForAction('activate') }} rule{{ getRulesCountForAction('activate') > 1 ? 's' : '' }}</template>
+                        <template v-else>All Already Active</template>
+                    </span>
+                    <span v-else-if="bulkActionModal.action === 'deactivate'">
+                        <template v-if="getRulesCountForAction('deactivate') > 0">Deactivate {{ getRulesCountForAction('deactivate') }} rule{{ getRulesCountForAction('deactivate') > 1 ? 's' : '' }}</template>
+                        <template v-else>All Already Inactive</template>
+                    </span>
                     <span v-else-if="bulkActionModal.action === 'delete'">Delete All</span>
                 </a>
             </div>
@@ -217,6 +240,29 @@ const isBulkActionRunning = ref(false);
 const bulkActionModal = ref({
     visible: false,
     action: null // 'activate', 'deactivate', 'delete'
+});
+
+const rulesToActivate = computed(() => {
+    return sortedAndFilteredRules.value.filter(rule => !rule.active);
+});
+
+const rulesToDeactivate = computed(() => {
+    return sortedAndFilteredRules.value.filter(rule => rule.active);
+});
+
+const getRulesCountForAction = computed(() => {
+    return (action) => {
+        switch (action) {
+            case 'activate':
+                return rulesToActivate.value.length;
+            case 'deactivate':
+                return rulesToDeactivate.value.length;
+            case 'delete':
+                return sortedAndFilteredRules.value.length;
+            default:
+                return 0;
+        }
+    };
 });
 
 const handleStatusUpdate = ({ ruleId, newStatus }) => {
@@ -251,10 +297,22 @@ const handleDeleteRule = async (ruleId) => {
                 });
             }
         } else {
-            const errorData = await response.json().catch(() => ({}));
+            let errorMessage = 'Unknown error';
+            try {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorData.error || 'Unknown error';
+                } else {
+                    errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                }
+            } catch (parseError) {
+                errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            }
+            
             emit('show-notification', {
                 type: 'error',
-                message: `Error deleting rule: ${errorData.message || 'Unknown error'}`
+                message: `Error deleting rule: ${errorMessage}`
             });
         }
     } catch (error) {
@@ -398,13 +456,37 @@ fetch(`${BASE_URL}/rules/sigma/list`, {
         'authorization': `Bearer ${localStorage.getItem('auth_token')}`,
     },
 })
-.then(response => response.json())
+.then(response => {    
+    if (!response.ok) {
+        return response.text().then(text => {
+            console.error(`HTTP ${response.status} error response:`, text.substring(0, 500));
+            throw new Error(`HTTP ${response.status}: ${response.statusText}. Response: ${text.substring(0, 200)}`);
+        });
+    }
+    
+    const contentType = response.headers.get('content-type');
+    
+    if (!contentType || !contentType.includes('application/json')) {
+        return response.text().then(text => {
+            console.error('Expected JSON but received:', text.substring(0, 200) + (text.length > 200 ? '...' : ''));
+            throw new Error(`Expected JSON response but got: ${contentType}. Response: ${text.substring(0, 100)}`);
+        });
+    }
+    
+    return response.json();
+})
 .then(data => {
     rules.value = data;
     isLoading.value = false;
 })
 .catch(error => {
     console.error('Error fetching rules:', error);
+    
+    emit('show-notification', { 
+        message: `Failed to load rules: ${error.message}`, 
+        type: 'error' 
+    });
+    
     isLoading.value = false;
 });
 
@@ -432,13 +514,38 @@ const closeBulkActionModal = () => {
 
 const executeBulkAction = async () => {
     const action = bulkActionModal.value.action;
-    const rulesToProcess = sortedAndFilteredRules.value.slice();
+    let rulesToProcess = sortedAndFilteredRules.value.slice();
+    
+    if (action === 'activate') {
+        rulesToProcess = rulesToProcess.filter(rule => !rule.active);
+    } else if (action === 'deactivate') {
+        rulesToProcess = rulesToProcess.filter(rule => rule.active);
+    }
     
     closeBulkActionModal();
+    
+    if (rulesToProcess.length === 0) {
+        let message = '';
+        if (action === 'activate') {
+            message = 'All filtered rules are already active';
+        } else if (action === 'deactivate') {
+            message = 'All filtered rules are already inactive';
+        }
+        
+        if (message) {
+            emit('show-notification', {
+                type: 'info',
+                message: message
+            });
+        }
+        return;
+    }
+    
     isBulkActionRunning.value = true;
     
     let successCount = 0;
     let errorCount = 0;
+    let skippedCount = sortedAndFilteredRules.value.length - rulesToProcess.length;
     
     try {
         for (const rule of rulesToProcess) {
@@ -494,8 +601,14 @@ const executeBulkAction = async () => {
                 message = `${successCount} rule${successCount > 1 ? 's' : ''} deleted successfully`;
             } else if (action === 'activate') {
                 message = `${successCount} rule${successCount > 1 ? 's' : ''} activated successfully`;
+                if (skippedCount > 0) {
+                    message += ` (${skippedCount} already active)`;
+                }
             } else if (action === 'deactivate') {
                 message = `${successCount} rule${successCount > 1 ? 's' : ''} deactivated successfully`;
+                if (skippedCount > 0) {
+                    message += ` (${skippedCount} already inactive)`;
+                }
             }
             
             emit('show-notification', {
