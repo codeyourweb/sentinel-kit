@@ -44,14 +44,15 @@
         <!-- Notification Modal -->
         <div 
             v-if="notification.visible" 
-            class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md w-full mx-4"
+            class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] max-w-md w-full mx-4"
         >
             <div 
                 class="rounded-lg shadow-lg transition-all duration-300 ease-in-out transform overflow-hidden"
                 :class="{
                     'bg-blue-100 border-l-4 border-blue-500': notification.type === 'info',
                     'bg-yellow-100 border-l-4 border-yellow-500': notification.type === 'warning',
-                    'bg-red-100 border-l-4 border-red-500': notification.type === 'error'
+                    'bg-red-100 border-l-4 border-red-500': notification.type === 'error',
+                    'bg-green-100 border-l-4 border-green-500': notification.type === 'success'
                 }"
             >
                 <div class="p-4">
@@ -62,7 +63,8 @@
                                 :class="{
                                     'icon-[material-symbols--info] text-blue-500 bg-blue-400': notification.type === 'info',
                                     'icon-[material-symbols--warning] text-yellow-500 bg-yellow-400': notification.type === 'warning',
-                                    'icon-[material-symbols--error] text-red-500 bg-red-400': notification.type === 'error'
+                                    'icon-[material-symbols--error] text-red-500 bg-red-400': notification.type === 'error',
+                                    'icon-[material-symbols--check-circle] text-green-500 bg-green-400': notification.type === 'success'
                                 }"
                             ></span>
                         </div>
@@ -72,7 +74,8 @@
                                 :class="{
                                     'text-blue-800': notification.type === 'info',
                                     'text-yellow-800': notification.type === 'warning',
-                                    'text-red-800': notification.type === 'error'
+                                    'text-red-800': notification.type === 'error',
+                                    'text-green-800': notification.type === 'success'
                                 }"
                             >
                                 {{ notification.message }}
@@ -85,7 +88,8 @@
                                 :class="{
                                     'text-blue-400 hover:bg-blue-200 focus:ring-blue-600': notification.type === 'info',
                                     'text-yellow-400 hover:bg-yellow-200 focus:ring-yellow-600': notification.type === 'warning',
-                                    'text-red-400 hover:bg-red-200 focus:ring-red-600': notification.type === 'error'
+                                    'text-red-400 hover:bg-red-200 focus:ring-red-600': notification.type === 'error',
+                                    'text-green-400 hover:bg-green-200 focus:ring-green-600': notification.type === 'success'
                                 }"
                             >
                                 <span class="sr-only">Close</span>
@@ -102,7 +106,8 @@
                         :class="{
                             'bg-blue-600': notification.type === 'info',
                             'bg-yellow-600': notification.type === 'warning',
-                            'bg-red-600': notification.type === 'error'
+                            'bg-red-600': notification.type === 'error',
+                            'bg-green-600': notification.type === 'success'
                         }"
                     ></div>
                 </div>
@@ -123,7 +128,7 @@ const isCollapsed = ref(true);
 // Notification system
 const notification = ref({
     visible: false,
-    type: 'info', // 'info', 'warning', 'error'
+    type: 'info', // 'info', 'warning', 'error', 'success'
     message: ''
 });
 
@@ -140,10 +145,9 @@ const showNotification = ({ type, message }) => {
         message
     };
     
-    // Auto-hide after 15 seconds
     notificationTimer = setTimeout(() => {
         hideNotification();
-    }, 15000);
+    }, 8000);
 };
 
 const hideNotification = () => {
@@ -166,18 +170,18 @@ const logout = () => {
 // Side menu items
 const menuItems = [
 { name: 'Home', icon: 'icon-[svg-spinners--blocks-wave]', route: 'Home' },
-{ name: 'Logs', icon: 'icon-[solar--presentation-graph-bold]', route: 'Kibana' },
-{ name: 'Rulesets', icon: 'icon-[mdi--account-child]', route: 'RulesList' },
-{ name: 'Detections', icon: 'icon-[solar--eye-scan-broken]', route: 'Home' },
-{ name: 'Assets & groups', icon: 'icon-[line-md--computer-twotone]', route: 'Home' },
-{ name: 'Monitoring', icon: 'icon-[material-symbols--monitor-heart-outline]', route: 'Grafana' }
+{ name: 'Rulesets', icon: 'icon-[carbon--rule-draft]', route: 'RulesList' },
+{ name: 'Logs', icon: 'icon-[icon-park-outline--log]', route: 'Kibana' },
+{ name: 'Alerts', icon: 'icon-[solar--eye-scan-broken]', route: 'Home' },
+{ name: 'Endpoint detection', icon: 'icon-[line-md--computer-twotone]', route: 'Home' },
+{ name: 'Perf. monitoring', icon: 'icon-[material-symbols--monitor-heart-outline]', route: 'Grafana' }
 ];
 </script>
 
 <style scoped>
 .progress-bar {
     width: 100%;
-    animation: progress-countdown 15s linear forwards;
+    animation: progress-countdown 8s linear forwards;
 }
 
 @keyframes progress-countdown {

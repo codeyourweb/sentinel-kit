@@ -13,6 +13,7 @@ use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 use App\Entity\SigmaRule;
 use App\Entity\SigmaRuleVersion;
+use App\Service\SigmaRuleValidator;
 
 #[AsCommand(
     name: 'app:sigma:load-rules',
@@ -21,11 +22,13 @@ use App\Entity\SigmaRuleVersion;
 class SigmaRulesLoadCommand extends Command
 {
     private $entityManager;
+    private $validator;
 
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(EntityManagerInterface $entityManager, SigmaRuleValidator $validator)
     {
         parent::__construct();
         $this->entityManager = $entityManager;
+        $this->validator = $validator;
     }
 
     protected function configure(): void
@@ -60,14 +63,52 @@ class SigmaRulesLoadCommand extends Command
                     continue;
                 }
 
-                $yamlData = Yaml::parse($content);
-                
-                if ($yamlData === null) {
-                    $io->warning("File contains no valid YAML data: $filePath");
+                $slugger = new AsciiSlugger();
+                $filename = $slugger->slug(pathinfo($relativePath, PATHINFO_FILENAME));
+                $titleFromFilename = pathinfo($relativePath, PATHINFO_FILENAME);
+
+                try {
+                    $yamlData = Yaml::parse($content);
+                } catch (ParseException $e) {
+                    $io->error("YAML parse error in file " . $relativePath . ": " . $e->getMessage());
+                    $errorCount++;
                     continue;
                 }
 
-                $this->storeSigmaRule($content, $yamlData, $relativePath, $io);
+                if (!$yamlData) {
+                    $io->error("Empty or invalid YAML content in file: " . $relativePath);
+                    $errorCount++;
+                    continue;
+                }
+
+                if (empty($yamlData['title'])) {
+                    $yamlData['title'] = $titleFromFilename;
+                }
+
+                if (empty($yamlData['description'])) {
+                    $yamlData['description'] = '';
+                }
+
+                $completedContent = Yaml::dump($yamlData);
+
+                $validationResult = $this->validator->validateSigmaRuleContent($completedContent);
+                
+                if (isset($validationResult['error'])) {
+                    $io->error("Validation error in file " . $relativePath . ": " . $validationResult['error']);
+                    $errorCount++;
+                    continue;
+                }
+
+                if (!empty($validationResult['missingFields'])) {
+                    $missingFieldsString = implode(", ", $validationResult['missingFields']);
+                    $io->warning("File " . $relativePath . " is missing required fields: " . $missingFieldsString . " - Skipping");
+                    $errorCount++;
+                    continue;
+                }
+
+                $finalYamlData = $validationResult['yamlData'];
+                
+                $this->storeSigmaRule($completedContent, $finalYamlData, $filename, $relativePath, $io);
                 $processedCount++;
             } catch (ParseException $e) {
                 $io->error("YAML parse error in file " . $relativePath . ": " . $e->getMessage());
@@ -120,44 +161,33 @@ class SigmaRulesLoadCommand extends Command
     /**
      * Store Sigma Rule and its version into the database
      */
-    private function storeSigmaRule(string $content, array $yamlData, string $filePath,SymfonyStyle $io): void
+    private function storeSigmaRule(string $content, array $yamlData, string $filename, string $filePath, SymfonyStyle $io): void
     {
-        $slugger = new AsciiSlugger();
-        $title = '';
-        $description = null;
-        $filename = $slugger->slug(pathinfo($filePath, PATHINFO_FILENAME));
-        
-        if (!empty($yamlData['title'])) {
-            $title = $yamlData['title'];
-        }else{
-            $title = substr($filename, 0, strlen($filename) - 4);
-        }
-
-        if (!empty($yamlData['description'])) {
-            $description = $yamlData['description'];
-        }
-
-        $r = $this->entityManager->GetRepository(SigmaRule::class)->findOneBy(['title' => $title]);
-        if ($r) {
-            $io->warning(sprintf('Rule with title "%s" already exists already exists in database', $title));
-            return;
-        }
-
-        $rd = $this->entityManager->getRepository(SigmaRuleVersion::class)->findOneBy(['hash' => md5($content)]);
-        if ($rd) {
-            $io->warning(sprintf('Rule "%s" ignored - content already exists in %s', $filePath, $title, $description));
-            return;
-        }
 
         $rule = new SigmaRule();
+        $rule->setTitle($yamlData['title']);
+        $rule->setDescription($yamlData['description']);
         $rule->setFilename($filename);
-        $rule->setTitle($title);
-        $rule->setDescription($description);
         $rule->setActive(false);
         
         $ruleVersion = new SigmaRuleVersion();
         $ruleVersion->setContent($content);
+        $ruleVersion->setLevel($yamlData['level']);
         $rule->addVersion($ruleVersion);
+
+
+        $r = $this->entityManager->GetRepository(SigmaRule::class)->findOneBy(['title' => $yamlData['title']]);
+        if ($r) {
+            $io->warning(sprintf('Rule with title "%s" already exists in database', $yamlData['title']));
+            return;
+        }
+
+        $rd = $this->entityManager->getRepository(SigmaRuleVersion::class)->findOneBy(['hash' => $ruleVersion->getHash()]);
+        if ($rd) {
+            $io->warning(sprintf('Rule "%s" ignored - content already exists', $filePath));
+            return;
+        }
+
         
         try{
             $this->entityManager->persist($rule);

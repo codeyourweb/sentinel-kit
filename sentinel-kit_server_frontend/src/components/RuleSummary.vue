@@ -14,7 +14,7 @@
                 
                 <RouterLink
                     :to="{ name: 'RuleEdit', params: { id: props.rule.id } }"
-                    class="p-2 rounded-full text-indigo-600 hover:bg-indigo-100 transition duration-150"
+                    class="p-2 rounded-full text-orange-400 hover:bg-orange-100 transition duration-150"
                     :class="{ 'pointer-events-none opacity-50': props.isDeleting }"
                     aria-label="Edit rule"
                     title="Edit rule"
@@ -25,7 +25,7 @@
                 <h2 class="text-xl font-bold truncate">
                     <RouterLink 
                         :to="{ name: 'RuleEdit', params: { id: props.rule.id } }" 
-                        class="text-gray-800 hover:text-indigo-600 transition duration-150"
+                        class="text-gray-800 hover:text-orange-400 transition duration-150"
                         :class="{ 'pointer-events-none text-gray-400': props.isDeleting }"
                     >
                         {{ props.rule.title }}
@@ -40,7 +40,7 @@
                 <div class="relative w-16 h-6 flex items-center justify-end">
                     
                     <div v-if="isUpdating" class="flex items-center space-x-2">
-                        <span class="icon-[svg-spinners--ring-resize] w-6 h-6 text-blue-500 animate-spin"></span>
+                        <span class="icon-[svg-spinners--ring-resize] w-6 h-6 text-orange-500 animate-spin"></span>
                     </div>
 
                     <label v-else class="relative inline-flex items-center cursor-pointer" :class="{ 'opacity-50 pointer-events-none': props.isDeleting }">
@@ -64,20 +64,26 @@
         
         <div class="flex justify-between items-center">
             
-            <div class="flex space-x-4 text-xs text-gray-500 font-medium">
-                <span class="mr-6">Detections: </span>
+            <div class="flex items-center space-x-4 text-xs text-gray-500 font-medium">
+                <span 
+                    class="px-2 py-1 rounded-full text-xs font-semibold border"
+                    :class="severityLabel.class"
+                >
+                    {{ severityLabel.text }}
+                </span>
+                <span class="flex items-center mr-6">Detections: </span>
                 <span class="flex items-center space-x-1">
-                    <span class="icon-[solar--clock-circle-broken] w-4 h-4 text-blue-500"></span>
+                    <span class="icon-[solar--clock-circle-broken] w-4 h-4 text-orange-500"></span>
                     <span class="font-bold text-gray-700">{{ props.rule.detections_24h || 0 }}</span>
                     <span>(24h)</span>
                 </span>
                 <span class="flex items-center space-x-1">
-                    <span class="icon-[solar--calendar-mark-bold] w-4 h-4 text-blue-500"></span>
+                    <span class="icon-[solar--calendar-mark-bold] w-4 h-4 text-orange-500"></span>
                     <span class="font-bold text-gray-700">{{ props.rule.detections_7d || 0 }}</span>
                     <span>(7j)</span>
                 </span>
                 <span class="flex items-center space-x-1">
-                    <span class="icon-[solar--calendar-bold] w-4 h-4 text-blue-500"></span>
+                    <span class="icon-[solar--calendar-bold] w-4 h-4 text-orange-500"></span>
                     <span class="font-bold text-gray-700">{{ props.rule.detections_30d || 0 }}</span>
                     <span>(30j)</span>
                 </span>
@@ -161,6 +167,22 @@ const shortDescription = computed(() => {
         return description.substring(0, maxChars) + '...';
     }
     return description;
+});
+
+const severityLabel = computed(() => {
+    const level = props.rule.level || 'informational';
+    const styles = {
+        critical: 'bg-red-100 text-red-800 border-red-200',
+        high: 'bg-orange-100 text-orange-800 border-orange-200',
+        medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        low: 'bg-blue-100 text-blue-800 border-blue-200',
+        informational: 'bg-gray-100 text-gray-800 border-gray-200'
+    };
+    
+    return {
+        text: level.charAt(0).toUpperCase() + level.slice(1),
+        class: styles[level] || styles.informational
+    };
 });
 
 const toggleStatus = async () => {

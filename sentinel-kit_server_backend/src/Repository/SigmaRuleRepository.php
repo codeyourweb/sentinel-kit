@@ -22,7 +22,23 @@ class SigmaRuleRepository extends ServiceEntityRepository
      * @return array
      */
     public function summaryFindAll() : array{
-        $qb = $this->createQueryBuilder("r")->orderBy("r.title","ASC")->select("r.id","r.title","r.description","r.active","r.createdOn","r.createdOn");
+        $qb = $this->createQueryBuilder("r");
+
+        $subQuery = $this->createQueryBuilder('r2')
+            ->select('MAX(v2.createdOn)')
+            ->innerJoin('r2.versions', 'v2')
+            ->where('r2.id = r.id') 
+            ->getDQL();
+
+        $qb->leftJoin(
+                'r.versions',
+                'v', 
+                Join::WITH, 
+                $qb->expr()->eq('v.createdOn', '(' . $subQuery . ')')
+            )
+            ->select("r.id","r.title","r.description","r.active","r.createdOn","v.level")
+            ->orderBy("r.title","ASC");
+            
         return $qb->getQuery()->getResult();
     }
 

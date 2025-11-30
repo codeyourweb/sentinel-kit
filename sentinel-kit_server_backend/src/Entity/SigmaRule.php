@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\String\Slugger\AsciiSlugger;
 
 #[ORM\Entity(repositoryClass: SigmaRuleRepository::class)]
 class SigmaRule
@@ -131,6 +132,8 @@ class SigmaRule
     public function setTitle(string $title): static
     {
         $this->title = trim($title);
+        $slugger = new AsciiSlugger();
+        $this->setFilename($slugger->slug($title)->lower());
 
         return $this;
     }

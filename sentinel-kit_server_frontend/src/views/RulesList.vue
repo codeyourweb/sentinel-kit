@@ -1,33 +1,91 @@
 <template>
-    <button class="btn btn-primary float-right mb-4" @click="$router.push({ name: 'RuleCreate' })">Create new rule</button>
+    <a class="btn btn-primary float-right mb-4 mt-4 text-white rounded" @click="$router.push({ name: 'RuleCreate' })">
+        <span class="icon-[material-symbols--save-rounded] bg-white text-white"></span>
+        Create new rule
+    </a>
     <h1 class="text-4xl font-extrabold text-gray-900 text-left m-4">Detection rules list</h1>
     <br class="clear-both" />
     <div v-if="rules.length > 0" class="space-y-4">
-        <div class="flex flex-wrap items-center gap-4 p-4 border rounded-lg bg-gray-50 shadow-sm">
-            
-            <p class="text-gray-600 flex-shrink-0 text-sm">
-                Showing {{ paginatedRules.length }} of {{ sortedAndFilteredRules.length }} rules.
-            </p>
+        <div class="flex flex-col gap-4 p-4 border border-orange-400 bg-white shadow-lg">
+            <div class="flex flex-wrap items-center gap-4">
+                <p class="text-gray-600 flex-shrink-0 text-sm">
+                    Showing {{ paginatedRules.length }} of {{ sortedAndFilteredRules.length }} rules.
+                </p>
 
-            <input 
-                type="text" 
-                placeholder="Search title or description..." 
-                v-model="searchQuery" 
-                class="p-2 border border-gray-300 rounded-lg shadow-sm flex-grow min-w-[200px]" 
-            />
-            
-            <select v-model="pageSize" @change="updatePageSize($event.target.value)" class="p-2 border border-gray-300 rounded-lg shadow-sm">
-                <option :value="20">20 per page</option>
-                <option :value="100">100 per page</option>
-                <option :value="1000">1000 per page</option>
-            </select>
+                <input 
+                    type="text" 
+                    placeholder="Search title or description..." 
+                    v-model="searchQuery" 
+                    class="p-2 border border-gray-300 rounded-lg shadow-sm flex-grow min-w-[200px]" 
+                />
+                
+                <select v-model="pageSize" @change="updatePageSize($event.target.value)" class="p-2 border border-gray-300 rounded-lg shadow-sm">
+                    <option :value="20">20 per page</option>
+                    <option :value="100">100 per page</option>
+                    <option :value="1000">1000 per page</option>
+                </select>
 
-            <select v-model="sortKey" @change="updateSort" class="p-2 border border-gray-300 rounded-lg shadow-sm">
-                <option value="title">Sort by Title (A-Z)</option>
-                <option value="createdOn">Creation Date (Newest First)</option>
-                <option value="active">Status (Active First)</option>
-            </select>
+                <select v-model="sortKey" @change="updateSort" class="p-2 border border-gray-300 rounded-lg shadow-sm">
+                    <option value="title">Sort by Title (A-Z)</option>
+                    <option value="createdOn">Creation Date (Newest First)</option>
+                    <option value="active">Status (Active First)</option>
+                    <option value="level">Severity Level (Critical to info.)</option>
+                </select>
+            </div>
             
+            <div v-if="searchQuery.trim().length > 0 && sortedAndFilteredRules.length > 0" class="mt-4">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="icon-[material-symbols--group-work] w-5 h-5 text-orange-400 bg-orange-400"></span>
+                        <span class="text-orange-800 font-medium text-sm">
+                            Bulk actions on {{ sortedAndFilteredRules.length }} filtered rule{{ sortedAndFilteredRules.length > 1 ? 's' : '' }}:
+                        </span>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <a 
+                            @click="handleBulkActionClick('activate', $event)"
+                            class="btn btn-success btn-sm px-3 py-1 text-xs font-medium rounded transition duration-150"
+                            :class="{
+                                'text-green-800 bg-green-100 border border-green-300 hover:bg-green-200 cursor-pointer': !isBulkActionRunning,
+                                'text-gray-500 bg-gray-100 border border-gray-300 cursor-not-allowed pointer-events-none': isBulkActionRunning
+                            }"
+                        >
+                            <span class="icon-[material-symbols--toggle-on] w-4 h-4 mr-1"></span>
+                            Activate All
+                        </a>
+                        
+                        <a 
+                            @click="handleBulkActionClick('deactivate', $event)"
+                            class="btn btn-warning btn-sm px-3 py-1 text-xs font-medium rounded transition duration-150"
+                            :class="{
+                                'text-yellow-800 bg-yellow-100 border border-yellow-300 hover:bg-yellow-200 cursor-pointer': !isBulkActionRunning,
+                                'text-gray-500 bg-gray-100 border border-gray-300 cursor-not-allowed pointer-events-none': isBulkActionRunning
+                            }"
+                        >
+                            <span class="icon-[material-symbols--toggle-off] w-4 h-4 mr-1"></span>
+                            Deactivate All
+                        </a>
+                        
+                        <a 
+                            @click="handleBulkActionClick('delete', $event)"
+                            class="btn btn-error btn-sm px-3 py-1 text-xs font-medium rounded transition duration-150"
+                            :class="{
+                                'text-red-800 bg-red-100 border border-red-300 hover:bg-red-200 cursor-pointer': !isBulkActionRunning,
+                                'text-gray-500 bg-gray-100 border border-gray-300 cursor-not-allowed pointer-events-none': isBulkActionRunning
+                            }"
+                        >
+                            <span class="icon-[material-symbols--delete-sweep] w-4 h-4 mr-1"></span>
+                            Delete All
+                        </a>
+                    </div>
+                    
+                    <div v-if="isBulkActionRunning" class="flex items-center space-x-2 text-orange-600">
+                        <span class="icon-[svg-spinners--ring-resize] w-4 h-4 animate-spin"></span>
+                        <span class="text-sm">Processing...</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -58,7 +116,7 @@
                 v-else
                 @click="goToPage(page)" 
                 :class="{ 
-                    'bg-blue-600 text-white border-blue-600': page === currentPage, 
+                    'bg-orange-400 text-white border-orange-400': page === currentPage, 
                     'bg-white text-gray-700 border-gray-300 hover:bg-gray-100': page !== currentPage 
                 }"
                 class="px-3 py-1 border rounded-lg transition-colors duration-150"
@@ -76,7 +134,67 @@
         </a>
     </div>
 
-    <p v-if="rules.length === 0" class="mt-6 text-center text-gray-500">Loading rules...</p>
+    <p v-if="isLoading" class="mt-6 text-center text-gray-500">Loading rules...</p>
+    <p v-else-if="rules.length === 0" class="mt-6 text-center text-gray-500">No detection rule stored yet</p>
+
+    <div 
+        v-if="bulkActionModal.visible" 
+        class="flex fixed inset-0 bg-gray-200 bg-opacity-80 backdrop-opacity-80 items-center justify-center z-50"
+        @click="closeBulkActionModal"
+    >
+        <div 
+            class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl"
+            @click.stop
+        >
+            <div class="flex items-center mb-4">
+                <span 
+                    class="w-6 h-6 mr-3"
+                    :class="{
+                        'icon-[material-symbols--warning] text-red-500': bulkActionModal.action === 'delete',
+                        'icon-[material-symbols--info] text-orange-400': bulkActionModal.action !== 'delete'
+                    }"
+                ></span>
+                <h3 class="text-lg font-semibold text-gray-900">
+                    Confirm bulk action
+                </h3>
+            </div>
+            
+            <p class="text-gray-600 mb-6">
+                <span v-if="bulkActionModal.action === 'activate'">
+                    Are you sure you want to <strong>activate</strong> all {{ sortedAndFilteredRules.length }} filtered rules?
+                </span>
+                <span v-else-if="bulkActionModal.action === 'deactivate'">
+                    Are you sure you want to <strong>deactivate</strong> all {{ sortedAndFilteredRules.length }} filtered rules?
+                </span>
+                <span v-else-if="bulkActionModal.action === 'delete'">
+                    Are you sure you want to <strong>delete</strong> all {{ sortedAndFilteredRules.length }} filtered rules? 
+                    <br><strong class="text-red-600">This action is irreversible.</strong>
+                </span>
+            </p>
+            
+            <div class="flex justify-end space-x-3">
+                <a
+                    @click="closeBulkActionModal"
+                    class="px-4 py-2 text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition duration-150 cursor-pointer"
+                >
+                    Cancel
+                </a>
+                <a
+                    @click="executeBulkAction"
+                    class="px-4 py-2 text-white rounded-lg transition duration-150 cursor-pointer"
+                    :class="{
+                        'bg-green-600 hover:bg-green-700': bulkActionModal.action === 'activate',
+                        'bg-yellow-600 hover:bg-yellow-700': bulkActionModal.action === 'deactivate',
+                        'bg-red-600 hover:bg-red-700': bulkActionModal.action === 'delete'
+                    }"
+                >
+                    <span v-if="bulkActionModal.action === 'activate'">Activate All</span>
+                    <span v-else-if="bulkActionModal.action === 'deactivate'">Deactivate All</span>
+                    <span v-else-if="bulkActionModal.action === 'delete'">Delete All</span>
+                </a>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup>
@@ -86,6 +204,7 @@ import { ref, computed, defineEmits } from 'vue';
 const emit = defineEmits(['show-notification']);
 
 const rules = ref([]);
+const isLoading = ref(true);
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const pageSize = ref(20);
@@ -93,6 +212,12 @@ const currentPage = ref(1);
 const searchQuery = ref('');
 const sortKey = ref('title');
 const deletingRules = ref(new Set());
+
+const isBulkActionRunning = ref(false);
+const bulkActionModal = ref({
+    visible: false,
+    action: null // 'activate', 'deactivate', 'delete'
+});
 
 const handleStatusUpdate = ({ ruleId, newStatus }) => {
     if (sortKey.value === 'active') {
@@ -174,6 +299,24 @@ const sortedAndFilteredRules = computed(() => {
         if (key === 'active') {
             if (a[key] === b[key]) return 0;
             return a[key] ? -1 : 1;
+        }
+
+        if (key === 'level') {
+            const severityOrder = {
+                'critical': 0,
+                'high': 1,
+                'medium': 2,
+                'low': 3,
+                'informational': 4
+            };
+            
+            const levelA = a[key] || 'informational';
+            const levelB = b[key] || 'informational';
+            
+            const orderA = severityOrder[levelA] !== undefined ? severityOrder[levelA] : 4;
+            const orderB = severityOrder[levelB] !== undefined ? severityOrder[levelB] : 4;
+            
+            return orderA - orderB;
         }
 
         if (typeof a[key] === 'string' && typeof b[key] === 'string') {
@@ -258,10 +401,126 @@ fetch(`${BASE_URL}/rules/sigma/list`, {
 .then(response => response.json())
 .then(data => {
     rules.value = data;
+    isLoading.value = false;
 })
 .catch(error => {
     console.error('Error fetching rules:', error);
+    isLoading.value = false;
 });
+
+const handleBulkActionClick = (action, event) => {
+    if (isBulkActionRunning.value) {
+        event.preventDefault();
+        return;
+    }
+    showBulkActionModal(action);
+};
+
+const showBulkActionModal = (action) => {
+    bulkActionModal.value = {
+        visible: true,
+        action: action
+    };
+};
+
+const closeBulkActionModal = () => {
+    bulkActionModal.value = {
+        visible: false,
+        action: null
+    };
+};
+
+const executeBulkAction = async () => {
+    const action = bulkActionModal.value.action;
+    const rulesToProcess = sortedAndFilteredRules.value.slice();
+    
+    closeBulkActionModal();
+    isBulkActionRunning.value = true;
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    try {
+        for (const rule of rulesToProcess) {
+            try {
+                if (action === 'delete') {
+                    const response = await fetch(`${BASE_URL}/rules/sigma/${rule.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const ruleIndex = rules.value.findIndex(r => r.id === rule.id);
+                        if (ruleIndex !== -1) {
+                            rules.value.splice(ruleIndex, 1);
+                        }
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } else {
+                    const newStatus = action === 'activate';
+                    const response = await fetch(`${BASE_URL}/rules/sigma/${rule.id}/status`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                        },
+                        body: JSON.stringify({ active: newStatus })
+                    });
+                    
+                    if (response.ok) {
+                        const ruleIndex = rules.value.findIndex(r => r.id === rule.id);
+                        if (ruleIndex !== -1) {
+                            rules.value[ruleIndex].active = newStatus;
+                        }
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                }
+            } catch (error) {
+                console.error(`Error processing rule ${rule.id}:`, error);
+                errorCount++;
+            }
+        }
+        
+        if (successCount > 0) {
+            let message = '';
+            if (action === 'delete') {
+                message = `${successCount} rule${successCount > 1 ? 's' : ''} deleted successfully`;
+            } else if (action === 'activate') {
+                message = `${successCount} rule${successCount > 1 ? 's' : ''} activated successfully`;
+            } else if (action === 'deactivate') {
+                message = `${successCount} rule${successCount > 1 ? 's' : ''} deactivated successfully`;
+            }
+            
+            emit('show-notification', {
+                type: 'success',
+                message: message
+            });
+        }
+        
+        if (errorCount > 0) {
+            emit('show-notification', {
+                type: 'error',
+                message: `${errorCount} rule${errorCount > 1 ? 's' : ''} failed to process`
+            });
+        }
+        
+    } catch (error) {
+        console.error('Bulk action error:', error);
+        emit('show-notification', {
+            type: 'error',
+            message: 'An error occurred during bulk action execution'
+        });
+    } finally {
+        isBulkActionRunning.value = false;
+    }
+};
 </script>
 
 <style scoped>

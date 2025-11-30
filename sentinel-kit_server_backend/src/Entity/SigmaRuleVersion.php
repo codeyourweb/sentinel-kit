@@ -20,6 +20,10 @@ class SigmaRuleVersion
     #[Groups(['rule_details'])]
     private ?string $content = null;
 
+    #[ORM\Column(length: 20)]
+    #[Groups(['rule_details'])]
+    private ?string $level = 'informational';
+
     #[ORM\Column(length: 64, unique: true)]
     private ?string $hash = null;
 
@@ -50,6 +54,25 @@ class SigmaRuleVersion
     {
         $this->content = $content;
         $this->setHash(md5($content));
+
+        return $this;
+    }
+
+    public function getLevel(): ?string
+    {
+        return $this->level;
+    }
+
+    public function setLevel(string $level): static
+    {
+        $allowedLevels = ['informational', 'low', 'medium', 'high', 'critical'];
+        if (!in_array($level, $allowedLevels)) {
+            throw new \InvalidArgumentException(
+                sprintf('Invalid level "%s". Allowed values are: %s', $level, implode(', ', $allowedLevels))
+            );
+        }
+        
+        $this->level = $level;
 
         return $this;
     }
