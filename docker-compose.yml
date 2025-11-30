@@ -88,6 +88,7 @@ services:
       - ELASTALERT_MODE=daemon
     volumes:
       - ./data/rulesets/sigma_ruleset:/app/sigma_ruleset:ro
+      - ./config/elastalert/defaults.yml:/app/defaults.yml:ro
       - ./config/elastalert/elastalert_config.yml:/app/elastalert_config.yml:ro
       - ./config/elastalert_ruleset:/app/elastalert_ruleset
       - sentinel-kit_certificates_elasticsearch:/app/certs:ro

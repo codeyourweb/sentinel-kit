@@ -13,17 +13,19 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\SigmaRule;
 use App\Entity\SigmaRuleVersion;
 use App\Service\SigmaRuleValidator;
-
+use App\Service\ElastalertRuleValidator;
 class SigmaController extends AbstractController{
 
     private $entityManger;
     private $serializer;
-    private $validator;
+    private $sigmaValidator;
+    private $elastalertValidator;
 
-    public function __construct(EntityManagerInterface $em, SerializerInterface $serializer, SigmaRuleValidator $validator){
+    public function __construct(EntityManagerInterface $em, SerializerInterface $serializer, SigmaRuleValidator $sigmaValidator, ElastalertRuleValidator $elastalertValidator){
         $this->entityManger = $em;
         $this->serializer = $serializer;
-        $this->validator = $validator;
+        $this->sigmaValidator = $sigmaValidator;
+        $this->elastalertValidator = $elastalertValidator;
     }
 
 
@@ -36,7 +38,7 @@ class SigmaController extends AbstractController{
         }
 
         $ruleContent = $data['rule_content'];
-        $validationResult = $this->validator->validateSigmaRuleContent($ruleContent);
+        $validationResult = $this->sigmaValidator->validateSigmaRuleContent($ruleContent);
 
         if (isset($validationResult['error'])) {
             return new JsonResponse(['error' => $validationResult['error']], Response::HTTP_BAD_REQUEST);
@@ -97,8 +99,18 @@ class SigmaController extends AbstractController{
             return new JsonResponse(['error' => 'Missing active status'], Response::HTTP_BAD_REQUEST);
         }
         $rule->setActive($data['active']);
+
+        if(!$data['active']){
+            $this->elastalertValidator->removeElastalertRule($rule->getRuleLatestVersion());
+        }else{
+            $e = $this->elastalertValidator->createElastalertRule($rule->getRuleLatestVersion());
+            if (isset($e['error'])) {
+                return new JsonResponse(['error' => $e['error']], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+        }
+
         $this->entityManger->flush();
-        return new JsonResponse(['message' => 'Rule status changed successfully'], Response::HTTP_OK);
+        return new JsonResponse(['message' => 'Rule status updated successfully'], Response::HTTP_OK);
     }
 
     #[Route('api/rules/sigma/{ruleId}/details', name:'app_sigma_get_rule', methods: ['GET'])]
@@ -125,7 +137,7 @@ class SigmaController extends AbstractController{
         }
 
         $ruleContent = $data['rule_content'];
-        $validationResult = $this->validator->validateSigmaRuleContent($ruleContent);
+        $validationResult = $this->sigmaValidator->validateSigmaRuleContent($ruleContent);
 
         if (isset($validationResult['error'])) {
             return new JsonResponse(['error' => $validationResult['error']], Response::HTTP_BAD_REQUEST);

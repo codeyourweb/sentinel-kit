@@ -44,6 +44,24 @@ class SigmaRuleValidator
         if (!isset($yamlData['level']) || !in_array($yamlData['level'], ['informational', 'low', 'medium', 'high', 'critical'])) {
             $yamlData['level'] = 'informational';
         }
+
+        if(!isset($yamlData['date']) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $yamlData['date'])) {
+            if (isset($yamlData['date']) && preg_match('/^\d+$/', $yamlData['date'])) {
+                $timestamp = (int)$yamlData['date'];
+                $yamlData['date'] = date('Y-m-d', $timestamp);
+            } else{
+                unset($yamlData['date']);
+            }
+        }
+
+        if(!isset($yamlData['modified']) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $yamlData['modified'])) {
+            if (isset($yamlData['modified']) && preg_match('/^\d+$/', $yamlData['modified'])) {
+                $timestamp = (int)$yamlData['modified'];
+                $yamlData['modified'] = date('Y-m-d', $timestamp);
+            } else{
+                unset($yamlData['modified']);
+            }
+        }
     
         return ['missingFields' => $missingFields, 'yamlData' => $yamlData];
     }

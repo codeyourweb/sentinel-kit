@@ -31,6 +31,7 @@ class SigmaRule
     private ?string $filename = null;
 
     #[ORM\Column]
+    #[Groups(['rule_details'])]
     private ?bool $active = null;
 
     /**
@@ -103,13 +104,17 @@ class SigmaRule
     public function removeVersion(SigmaRuleVersion $version): static
     {
         if ($this->versions->removeElement($version)) {
-            // set the owning side to null (unless already changed)
             if ($version->getRule() === $this) {
                 $version->setRule(null);
             }
         }
 
         return $this;
+    }
+
+    public function getRuleLatestVersion(): ?SigmaRuleVersion
+    {
+        return $this->versions->first() ?: null;
     }
 
     public function getCreatedOn(): ?\DateTime

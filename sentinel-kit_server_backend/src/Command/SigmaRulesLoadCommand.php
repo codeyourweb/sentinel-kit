@@ -5,6 +5,7 @@ namespace App\Command;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Doctrine\ORM\EntityManagerInterface;
@@ -14,6 +15,7 @@ use Symfony\Component\Yaml\Exception\ParseException;
 use App\Entity\SigmaRule;
 use App\Entity\SigmaRuleVersion;
 use App\Service\SigmaRuleValidator;
+use Symfony\Component\Console\Input\InputOption;
 
 #[AsCommand(
     name: 'app:sigma:load-rules',
@@ -33,11 +35,18 @@ class SigmaRulesLoadCommand extends Command
 
     protected function configure(): void
     {
+        $this->addOption(
+            'auto-enable',
+            null,
+            InputOption::VALUE_NONE,
+            'Automatically enable imported rules'
+        );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
+        $autoEnable = $input->getOption('auto-enable');
        
         $directory = '/detection-rules/sigma';
 
@@ -105,10 +114,8 @@ class SigmaRulesLoadCommand extends Command
                     $errorCount++;
                     continue;
                 }
-
-                $finalYamlData = $validationResult['yamlData'];
                 
-                $this->storeSigmaRule($completedContent, $finalYamlData, $filename, $relativePath, $io);
+                $this->storeSigmaRule(Yaml::dump($validationResult['yamlData']), $validationResult['yamlData'], $filename, $relativePath, $autoEnable, $io);
                 $processedCount++;
             } catch (ParseException $e) {
                 $io->error("YAML parse error in file " . $relativePath . ": " . $e->getMessage());
@@ -130,13 +137,27 @@ class SigmaRulesLoadCommand extends Command
         $io->text("Total files processed: $processedCount");
         if ($errorCount > 0) {
             $io->text("Files with errors: $errorCount");
-            return Command::FAILURE;
-        } else {
-            $io->success("Sigma rules loaded successfully.");
         }
 
+        if ($processedCount > 0) {
+            $io->success("$processedCount Sigma rules loaded successfully.");
+            
+            $io->text("Synchronizing Elastalert rules...");
+            $syncCommand = $this->getApplication()->find('app:elastalert:sync');
+            $syncInput = new ArrayInput([]);
+            $syncReturnCode = $syncCommand->run($syncInput, $output);
+            
+            if ($syncReturnCode === Command::SUCCESS) {
+                $io->success("Elastalert synchronization completed successfully.");
+            } else {
+                $io->warning("Elastalert synchronization failed, but Sigma rules were imported successfully.");
+            }
+            
+            return ($errorCount > 0) ? Command::FAILURE : Command::SUCCESS;
+        }
 
-        return Command::SUCCESS;
+        $io->error("No rules were successfully imported.");
+        return Command::FAILURE;
     }
 
     /**
@@ -161,20 +182,19 @@ class SigmaRulesLoadCommand extends Command
     /**
      * Store Sigma Rule and its version into the database
      */
-    private function storeSigmaRule(string $content, array $yamlData, string $filename, string $filePath, SymfonyStyle $io): void
+    private function storeSigmaRule(string $content, array $yamlData, string $filename, string $filePath, bool $autoEnable, SymfonyStyle $io): void
     {
 
         $rule = new SigmaRule();
         $rule->setTitle($yamlData['title']);
         $rule->setDescription($yamlData['description']);
         $rule->setFilename($filename);
-        $rule->setActive(false);
+        $rule->setActive($autoEnable);
         
         $ruleVersion = new SigmaRuleVersion();
         $ruleVersion->setContent($content);
         $ruleVersion->setLevel($yamlData['level']);
         $rule->addVersion($ruleVersion);
-
 
         $r = $this->entityManager->GetRepository(SigmaRule::class)->findOneBy(['title' => $yamlData['title']]);
         if ($r) {

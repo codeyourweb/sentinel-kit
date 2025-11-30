@@ -67,11 +67,11 @@
             <div v-if="isUpdatingStatus" class="flex items-center">
               <span class="icon-[svg-spinners--ring-resize] w-6 h-6 text-blue-500 animate-spin"></span>
             </div>
-            <label v-else class="relative inline-flex items-center cursor-pointer">
+            <label v-else-if="details" class="relative inline-flex items-center cursor-pointer">
               <input 
                 type="checkbox" 
                 class="sr-only peer" 
-                :checked="details?.active"
+                v-model="ruleActiveStatus"
                 @change="toggleStatus" 
               />
               <div 
@@ -93,6 +93,20 @@
             <span class="icon-[material-symbols--save-rounded] bg-white text-white w-4 h-4 mr-2" v-else></span>
             Save changes
           </a>
+        </div>
+      </div>
+      
+      <div v-if="activationError" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <span class="icon-[material-symbols--error] w-5 h-5 text-red-400"></span>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800 text-left"><strong>Rule activation failed</strong></h3>
+            <div class="mt-2 text-sm text-red-700">
+              <p class="text-justify">{{ activationError }}</p>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -143,6 +157,7 @@ const hasChanges = ref(false);
 const isUpdatingStatus = ref(false);
 const isSaving = ref(false);
 const syntaxError = ref(null);
+const activationError = ref(null);
 
 const currentSelectedContent = ref(''); 
 const previousVersionContent = ref(''); 
@@ -167,6 +182,17 @@ const hasPreviousVersion = computed(() => {
     return details.value?.versions?.length > 1;
 });
 
+const ruleActiveStatus = computed({
+    get() {
+        return details.value?.active || false;
+    },
+    set(value) {
+        if (details.value) {
+            details.value.active = value;
+        }
+    }
+});
+
 watch(code, (newContent) => {
     if (originalContent.value && !isDiffMode.value && !isLatestDiffToggled.value) {
         hasChanges.value = newContent !== originalContent.value;
@@ -178,8 +204,10 @@ watch(code, (newContent) => {
 const toggleStatus = async () => {
     if (isUpdatingStatus.value || !details.value) return;
 
+    activationError.value = null;
     isUpdatingStatus.value = true;
-    const newStatus = !details.value.active;
+    const newStatus = ruleActiveStatus.value;
+    const previousStatus = !newStatus;
     
     try {
         const response = await fetch(`${BASE_URL}/rules/sigma/${details.value.id}/status`, {
@@ -192,20 +220,32 @@ const toggleStatus = async () => {
         });
 
         if (response.ok) {
-            details.value.active = newStatus;
             emit('show-notification', { 
                 message: `Rule ${newStatus ? 'activated' : 'deactivated'} successfully!`, 
                 type: 'success' 
             });
         } else {
-            console.error('API update failed:', await response.text());
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error || errorData.details || 'Failed to update rule status';
+            
+            if (details.value) {
+                details.value.active = previousStatus;
+            }
+            
+            activationError.value = errorMessage;
+            
+            console.error('API update failed:', errorMessage);
             emit('show-notification', { 
-                message: 'Failed to update rule status', 
+                message: 'Failed to update rule status - see details above', 
                 type: 'error' 
             });
         }
     } catch (error) {
         console.error('Network or parsing error:', error);
+        if (details.value) {
+            details.value.active = previousStatus;
+        }
+        activationError.value = 'Network error occurred while updating rule status';
         emit('show-notification', { 
             message: 'An error occurred while updating rule status', 
             type: 'error' 
@@ -215,9 +255,7 @@ const toggleStatus = async () => {
     }
 };
 
-// Fonction pour gérer le clic sur Save changes (pour lien stylisé)
 const handleSaveClick = (event) => {
-    // Empêcher l'action si le lien est désactivé
     if (!hasChanges.value || isSaving.value) {
         event.preventDefault();
         return;
@@ -225,7 +263,6 @@ const handleSaveClick = (event) => {
     saveChanges();
 };
 
-// Fonction pour sauvegarder les changements
 const saveChanges = async () => {
     if (isSaving.value || !hasChanges.value) return;
     
