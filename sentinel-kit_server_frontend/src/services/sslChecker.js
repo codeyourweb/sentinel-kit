@@ -1,18 +1,18 @@
 const SERVICES = {
+  backend: {
+    name: '1 - Backend API',
+    url: import.meta.env.VITE_BACKEND_URL,
+    description: 'Main application backend'
+  },
   kibana: {
-    name: 'Kibana',
+    name: '2 - Kibana',
     url: import.meta.env.VITE_KIBANA_URL,
     description: 'Log analysis'
   },
   grafana: {
-    name: 'Grafana',
+    name: '3 - Grafana',
     url: import.meta.env.VITE_GRAFANA_URL,
     description: 'Metrics and monitoring'
-  },
-  backend: {
-    name: 'Backend API',
-    url: import.meta.env.VITE_BACKEND_URL,
-    description: 'Main application backend'
   }
 };
 
