@@ -29,9 +29,14 @@ RUN mkdir -p /run/nginx /var/log/nginx && \
 
 RUN chown -R www-data:www-data /var/www/html && chown -R www-data:www-data /detection-rules
 
-COPY config/docker-config/backend-entrypoint.sh /opt/server-backend/backend-entrypoint.sh
-RUN chmod +x /opt/server-backend/backend-entrypoint.sh
+COPY sentinel-kit_server_backend/composer.json /var/www/html/composer.json
 
 WORKDIR /var/www/html
+
+RUN composer install --no-scripts --no-autoloader && \
+    composer dump-autoload --no-scripts --optimize
+
+COPY config/docker-config/backend-entrypoint.sh /opt/server-backend/backend-entrypoint.sh
+RUN chmod +x /opt/server-backend/backend-entrypoint.sh
 
 ENTRYPOINT ["/bin/sh", "-c", "/opt/server-backend/backend-entrypoint.sh"]

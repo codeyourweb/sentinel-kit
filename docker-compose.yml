@@ -67,14 +67,14 @@ services:
     depends_on:
       - sentinel-kit-db-mysql
 
-  sentinel-kit-app-rules-scanner:
-    container_name: sentinel-kit-app-rules-scanner
-    hostname: sentinel-kit-app-rules-scanner
+  sentinel-kit-server-rules-scanner:
+    container_name: sentinel-kit-server-rules-scanner
+    hostname: sentinel-kit-server-rules-scanner
     build:
       context: .
       dockerfile: config/docker-config/Dockerfile.scanner
     restart: on-failure
-    user: "0"  # Run as root to access certificates
+    user: "0"
     depends_on:
       sentinel-kit-db-mysql:
         condition: service_healthy

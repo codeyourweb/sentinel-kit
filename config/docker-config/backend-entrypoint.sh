@@ -12,8 +12,14 @@ setup_symfony() {
     rm -rf /var/www/html/public/bundles
     rm -rf /detection-rules/elastalert/*
     
-    echo "Installing Composer dependencies..."
-    composer install
+    # Vérifier si les dépendances Composer sont installées
+    if [ ! -d "/var/www/html/vendor" ] || [ ! -f "/var/www/html/vendor/autoload.php" ]; then
+        echo "Installing Composer dependencies..."
+        composer install --no-scripts
+        composer dump-autoload --optimize
+    else
+        echo "Composer dependencies already installed."
+    fi
     
     if [ ! -f "$MARKER_FILE" ]; then
         echo "Running initial setup..."

@@ -1,0 +1,359 @@
+#!/bin/bash
+
+# Colors for output
+SUCCESS_COLOR="\033[32m"  # Green
+ERROR_COLOR="\033[31m"    # Red
+WARNING_COLOR="\033[33m"  # Yellow
+INFO_COLOR="\033[36m"     # Cyan
+HEADER_COLOR="\033[35m"   # Magenta
+GRAY_COLOR="\033[90m"     # Gray
+WHITE_COLOR="\033[37m"    # White
+RESET_COLOR="\033[0m"     # Reset
+
+show_help() {
+    echo ""
+    echo -e "${HEADER_COLOR}=============================================${RESET_COLOR}"
+    echo -e "${HEADER_COLOR}       Sentinel-Kit Management Script        ${RESET_COLOR}"
+    echo -e "${HEADER_COLOR}=============================================${RESET_COLOR}"
+    echo ""
+    echo -e "${INFO_COLOR}USAGE:${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}./launcher.sh <command>${RESET_COLOR}"
+    echo ""
+    echo -e "${INFO_COLOR}COMMANDS:${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}run         Start the Docker stack (using existing images)${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}stop        Stop the running Docker stack${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}build       Build and start the Docker stack (rebuild images)${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}clean-data  Clean all user data and stop containers${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}console     Access Sentinel-Kit console in backend container${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}help        Show this help message${RESET_COLOR}"
+    echo ""
+    echo -e "${INFO_COLOR}OPTIONS:${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}-h, --help  Show this help message${RESET_COLOR}"
+    echo ""
+    echo -e "${INFO_COLOR}EXAMPLES:${RESET_COLOR}"
+    echo -e "  ${GRAY_COLOR}./launcher.sh run         # Start the stack${RESET_COLOR}"
+    echo -e "  ${GRAY_COLOR}./launcher.sh build       # Build and start${RESET_COLOR}"
+    echo -e "  ${GRAY_COLOR}./launcher.sh stop        # Stop the stack${RESET_COLOR}"
+    echo -e "  ${GRAY_COLOR}./launcher.sh clean-data  # Clean all data${RESET_COLOR}"
+    echo -e "  ${GRAY_COLOR}./launcher.sh console     # Access Sentinel-Kit console${RESET_COLOR}"
+    echo ""
+}
+
+test_docker_compose() {
+    echo -e "${WARNING_COLOR}Checking for 'docker compose' presence...${RESET_COLOR}"
+    local test_result
+    test_result=$(docker compose version 2>/dev/null)
+    
+    if [ $? -eq 0 ] && [ -n "$test_result" ]; then
+        local version_line=$(echo "$test_result" | head -n 1)
+        echo -e "${SUCCESS_COLOR}✅ 'docker compose' is available. Found version: $version_line${RESET_COLOR}"
+        return 0
+    else
+        echo -e "${ERROR_COLOR}--------------------------------------------------------${RESET_COLOR}"
+        echo -e "${ERROR_COLOR}🛑 FAILURE: The 'docker compose' command is not available.${RESET_COLOR}"
+        echo -e "${ERROR_COLOR}Please ensure Docker is installed and 'docker compose' is in your PATH.${RESET_COLOR}"
+        echo -e "${ERROR_COLOR}Check command exit code: $?${RESET_COLOR}"
+        echo -e "${ERROR_COLOR}--------------------------------------------------------${RESET_COLOR}"
+        return 1
+    fi
+}
+
+get_running_containers() {
+    docker compose ps -q 2>/dev/null
+}
+
+start_sentinel_kit() {
+    echo ""
+    echo -e "${HEADER_COLOR}========== STARTING SENTINELKIT ==========${RESET_COLOR}"
+    
+    if ! test_docker_compose; then
+        exit 1
+    fi
+    
+    echo "--------------------------------------------------------"
+    local running_containers
+    running_containers=$(get_running_containers)
+    
+    if [ -n "$running_containers" ]; then
+        local container_count=$(echo "$running_containers" | wc -l)
+        echo -e "${INFO_COLOR}--------------------------------------------------------${RESET_COLOR}"
+        echo -e "${INFO_COLOR}ℹ️ INFORMATION: The Docker stack is already running.${RESET_COLOR}"
+        echo -e "${INFO_COLOR}Number of active containers: $container_count${RESET_COLOR}"
+        echo -e "${INFO_COLOR}No action taken. If you need to rebuild images, run: ./launcher.sh build${RESET_COLOR}"
+        echo -e "${INFO_COLOR}--------------------------------------------------------${RESET_COLOR}"
+        return
+    fi
+    
+    echo -e "${WARNING_COLOR}No active containers found. Starting the Docker stack using existing images...${RESET_COLOR}"
+    
+    if docker compose up -d; then
+        echo "--------------------------------------------------------"
+        echo -e "${SUCCESS_COLOR}🎉 Success! The Docker stack has been launched.${RESET_COLOR}"
+        echo -e "${SUCCESS_COLOR}Containers are running in detached mode.${RESET_COLOR}"
+    else
+        echo -e "${ERROR_COLOR}❌ Internal error while running 'docker compose up'. Exit Code: $?${RESET_COLOR}"
+        echo -e "${ERROR_COLOR}Please check your docker-compose.yml file and logs for details. Did you forget to build first?${RESET_COLOR}"
+    fi
+}
+
+stop_sentinel_kit() {
+    echo ""
+    echo -e "${HEADER_COLOR}========== STOPPING SENTINELKIT ==========${RESET_COLOR}"
+    
+    if ! test_docker_compose; then
+        exit 1
+    fi
+    
+    echo -e "${WARNING_COLOR}Checking current status of the Docker stack...${RESET_COLOR}"
+    local running_containers
+    running_containers=$(get_running_containers)
+    
+    if [ -n "$running_containers" ]; then
+        local container_count=$(echo "$running_containers" | wc -l)
+        echo -e "${INFO_COLOR}🔍 $container_count running Docker container(s) found. Attempting to stop...${RESET_COLOR}"
+        
+        if docker compose down; then
+            echo "--------------------------------------------------------"
+            echo -e "${SUCCESS_COLOR}🎉 Success! The Docker stack has been stopped (docker compose down).${RESET_COLOR}"
+            echo -e "${SUCCESS_COLOR}All containers, networks, and default volumes have been cleaned up.${RESET_COLOR}"
+        else
+            echo -e "${ERROR_COLOR}❌ Internal error while running 'docker compose down'. Exit Code: $?${RESET_COLOR}"
+            echo -e "${ERROR_COLOR}Please check Docker logs for more details.${RESET_COLOR}"
+        fi
+    else
+        echo -e "${INFO_COLOR}--------------------------------------------------------${RESET_COLOR}"
+        echo -e "${INFO_COLOR}ℹ️ INFORMATION: No Docker stack is currently running (according to docker compose ps -q).${RESET_COLOR}"
+        echo -e "${INFO_COLOR}No 'docker compose down' action was executed.${RESET_COLOR}"
+        echo -e "${INFO_COLOR}--------------------------------------------------------${RESET_COLOR}"
+    fi
+}
+
+build_sentinel_kit() {
+    echo ""
+    echo -e "${HEADER_COLOR}========== BUILDING SENTINELKIT ==========${RESET_COLOR}"
+    
+    if ! test_docker_compose; then
+        exit 1
+    fi
+    
+    echo "--------------------------------------------------------"
+    local running_containers
+    running_containers=$(get_running_containers)
+    
+    if [ -n "$running_containers" ]; then
+        local container_count=$(echo "$running_containers" | wc -l)
+        echo -e "${ERROR_COLOR}--------------------------------------------------------${RESET_COLOR}"
+        echo -e "${ERROR_COLOR}🛑 STOP REQUIRED: The Docker stack is already running.${RESET_COLOR}"
+        echo -e "${ERROR_COLOR}Number of active containers: $container_count${RESET_COLOR}"
+        echo -e "${ERROR_COLOR}Please stop the stack first using: ./launcher.sh stop${RESET_COLOR}"
+        echo -e "${ERROR_COLOR}--------------------------------------------------------${RESET_COLOR}"
+        return
+    fi
+    
+    echo -e "${WARNING_COLOR}No active containers found. Starting and rebuilding the Docker stack...${RESET_COLOR}"
+    
+    if docker compose up -d --build --force-recreate; then
+        echo "--------------------------------------------------------"
+        echo -e "${SUCCESS_COLOR}🎉 Success! The Docker stack has been rebuilt and started.${RESET_COLOR}"
+        echo -e "${SUCCESS_COLOR}Containers are running in detached mode.${RESET_COLOR}"
+    else
+        echo -e "${ERROR_COLOR}❌ Internal error while running 'docker compose up'. Exit Code: $?${RESET_COLOR}"
+        echo -e "${ERROR_COLOR}Please check your docker-compose.yml file and logs for details.${RESET_COLOR}"
+    fi
+}
+
+start_sentinel_kit_console() {
+    echo ""
+    echo -e "${HEADER_COLOR}========== SENTINEL-KIT CONSOLE ACCESS ==========${RESET_COLOR}"
+    
+    if ! test_docker_compose; then
+        exit 1
+    fi
+    
+    local backend_container
+    backend_container=$(docker compose ps -q sentinel-kit-app-backend 2>/dev/null)
+    
+    if [ -z "$backend_container" ]; then
+        echo -e "${ERROR_COLOR}❌ The backend container (sentinel-kit-app-backend) is not running.${RESET_COLOR}"
+        echo -e "${INFO_COLOR}Please start the stack first using: ./launcher.sh run${RESET_COLOR}"
+        return
+    fi
+    
+    echo -e "${SUCCESS_COLOR}✅ Backend container found. Starting interactive console...${RESET_COLOR}"
+    echo ""
+    echo -e "${INFO_COLOR}=========================================${RESET_COLOR}"
+    echo -e "${INFO_COLOR} Sentinel-Kit Console - Interactive Mode ${RESET_COLOR}"
+    echo -e "${INFO_COLOR}=========================================${RESET_COLOR}"
+    echo -e "${WARNING_COLOR}Type your console commands${RESET_COLOR}"
+    echo -e "${WARNING_COLOR}Examples:${RESET_COLOR}"
+    echo ""
+    echo -e "  ${GRAY_COLOR}app                     # List all sentinel-kit application commands${RESET_COLOR}"
+    echo -e "  ${GRAY_COLOR}cache:clear             # Force backend cache clear${RESET_COLOR}"
+    echo -e "  ${GRAY_COLOR}help                    # List all built-in commands${RESET_COLOR}"
+    echo -e "${WARNING_COLOR}Type 'exit' to return to bash${RESET_COLOR}"
+    echo ""
+    
+    while true; do
+        echo -n "sentinel-kit> "
+        read -r command
+        
+        if [ "$command" = "exit" ] || [ "$command" = "quit" ]; then
+            echo -e "${INFO_COLOR}Exiting Sentinel-Kit console...${RESET_COLOR}"
+            break
+        fi
+        
+        if [ -z "$command" ] || [ "$command" = " " ]; then
+            continue
+        fi
+        
+        echo ""
+        echo -e "${INFO_COLOR}Executing: php bin/console $command${RESET_COLOR}"
+        echo -e "${GRAY_COLOR}----------------------------------------${RESET_COLOR}"
+        
+        if docker compose exec sentinel-kit-app-backend php bin/console $command; then
+            if [ $? -ne 0 ]; then
+                echo -e "${WARNING_COLOR}⚠️  Command completed with exit code: $?${RESET_COLOR}"
+            fi
+        else
+            echo -e "${ERROR_COLOR}❌ Error executing command${RESET_COLOR}"
+        fi
+        
+        echo ""
+    done
+}
+
+clear_sentinel_kit_data() {
+    echo ""
+    echo -e "${HEADER_COLOR}========== CLEANING SENTINELKIT DATA ==========${RESET_COLOR}"
+    echo ""
+    echo -e "${WARNING_COLOR}⚠️  WARNING: This will remove ALL user data and configurations!${RESET_COLOR}"
+    echo -e "${WARNING_COLOR}This includes:${RESET_COLOR}"
+    echo -e "${WARNING_COLOR}  - Frontend dependencies and builds${RESET_COLOR}"
+    echo -e "${WARNING_COLOR}  - Backend cache and vendor files${RESET_COLOR}"
+    echo -e "${WARNING_COLOR}  - Database migrations and JWT keys${RESET_COLOR}"
+    echo -e "${WARNING_COLOR}  - All application data (logs, uploads, etc.)${RESET_COLOR}"
+    echo -e "${WARNING_COLOR}  - Docker volumes and containers${RESET_COLOR}"
+    echo ""
+    
+    echo -n "Are you sure you want to continue? Type 'yes' to confirm: "
+    read -r confirmation
+    
+    if [ "$confirmation" != "yes" ]; then
+        echo -e "${INFO_COLOR}Operation cancelled.${RESET_COLOR}"
+        return
+    fi
+    
+    echo ""
+    echo -e "${WARNING_COLOR}Starting cleanup process...${RESET_COLOR}"
+    
+    items_to_remove=(
+        "./sentinel-kit_server_frontend/node_modules"
+        "./sentinel-kit_server_frontend/package-lock.json"
+        "./sentinel-kit_server_frontend/dist"
+        "./sentinel-kit_server_backend/.initial_setup_done"
+        "./sentinel-kit_server_backend/composer.lock"
+        "./sentinel-kit_server_backend/symfony.lock"
+        "./sentinel-kit_server_backend/var"
+        "./sentinel-kit_server_backend/vendor"
+        "./sentinel-kit_server_backend/migrations"
+        "./sentinel-kit_server_backend/config/jwt/*.pem"
+        "./config/elastalert_ruleset/*"
+        "./config/caddy_server/certificates/*"
+        "./data/caddy_logs/*"
+        "./data/ftp_data/*"
+        "./data/grafana/*"
+        "./data/kibana/*"
+        "./data/log_ingest_data/auditd/*"
+        "./data/log_ingest_data/evtx/*"
+        "./data/log_ingest_data/json/*"
+        "./data/fluentbit_db/*"
+        "./data/yara_triage_data/*"
+    )
+    
+    local success_count=0
+    local error_count=0
+    
+    for item in "${items_to_remove[@]}"; do
+        if [ -e "$item" ] || [ -d "$item" ]; then
+            if rm -rf "$item" 2>/dev/null; then
+                echo -e "${SUCCESS_COLOR}✅ Removed: $item${RESET_COLOR}"
+                ((success_count++))
+            else
+                echo -e "${ERROR_COLOR}❌ Failed to remove: $item${RESET_COLOR}"
+                ((error_count++))
+            fi
+        else
+            echo -e "${GRAY_COLOR}⏭️  Skipped: $item (not found)${RESET_COLOR}"
+        fi
+    done
+    
+    echo ""
+    echo -e "${WARNING_COLOR}Stopping Docker containers and removing volumes...${RESET_COLOR}"
+    
+    if docker compose down -v; then
+        echo -e "${SUCCESS_COLOR}✅ Docker containers and volumes removed successfully.${RESET_COLOR}"
+        ((success_count++))
+    else
+        echo -e "${ERROR_COLOR}❌ Error stopping Docker containers. Exit Code: $?${RESET_COLOR}"
+        ((error_count++))
+    fi
+    
+    echo ""
+    echo "--------------------------------------------------------"
+    echo -e "${HEADER_COLOR}🧹 Cleanup Summary:${RESET_COLOR}"
+    echo -e "${SUCCESS_COLOR}✅ Successful operations: $success_count${RESET_COLOR}"
+    if [ $error_count -gt 0 ]; then
+        echo -e "${ERROR_COLOR}❌ Failed operations: $error_count${RESET_COLOR}"
+    fi
+    echo "--------------------------------------------------------"
+    
+    if [ $error_count -eq 0 ]; then
+        echo -e "${SUCCESS_COLOR}🎉 All user data has been successfully cleaned!${RESET_COLOR}"
+    else
+        echo -e "${WARNING_COLOR}⚠️  Cleanup completed with some errors. Check the output above.${RESET_COLOR}"
+    fi
+}
+
+command=""
+case "${1:-}" in
+    "run"|"stop"|"build"|"clean-data"|"console"|"help")
+        command="$1"
+        ;;
+    "-h"|"--help")
+        command="help"
+        ;;
+    "")
+        command="help"
+        ;;
+    *)
+        echo -e "${ERROR_COLOR}❌ Unknown command: $1${RESET_COLOR}"
+        echo -e "${INFO_COLOR}Use './launcher.sh help' to see available commands.${RESET_COLOR}"
+        exit 1
+        ;;
+esac
+
+case "$command" in
+    "run")
+        start_sentinel_kit
+        ;;
+    "stop")
+        stop_sentinel_kit
+        ;;
+    "build")
+        build_sentinel_kit
+        ;;
+    "clean-data")
+        clear_sentinel_kit_data
+        ;;
+    "console")
+        start_sentinel_kit_console
+        ;;
+    "help")
+        show_help
+        ;;
+    *)
+        echo -e "${ERROR_COLOR}❌ Unknown command: $command${RESET_COLOR}"
+        echo -e "${INFO_COLOR}Use './launcher.sh help' to see available commands.${RESET_COLOR}"
+        exit 1
+        ;;
+esac
