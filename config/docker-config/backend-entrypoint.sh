@@ -86,6 +86,18 @@ setup_symfony() {
     else
         echo "Initial setup already completed (marker file exists)."
         
+        if [ ! -f "/var/www/html/config/jwt/private.pem" ] || [ ! -f "/var/www/html/config/jwt/public.pem" ]; then
+            echo "JWT keypair missing, regenerating..."
+            if ! php /var/www/html/bin/console lexik:jwt:generate-keypair; then
+                echo "ERROR: Failed to regenerate JWT keypair"
+                exit 1
+            fi
+            php /var/www/html/bin/console lexik:jwt:check-config
+            echo "JWT keypair regenerated successfully."
+        else
+            echo "JWT keypair exists."
+        fi
+        
         echo "Checking if database migrations are up to date..."
         if ! php /var/www/html/bin/console doctrine:migrations:up-to-date; then
             echo "Database migrations are not up to date, running migrations..."

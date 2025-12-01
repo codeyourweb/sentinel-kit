@@ -275,35 +275,105 @@ switch ($Command.ToLower()) {
         $confirmation = Read-Host "Type 'yes' to proceed"
         
         if ($confirmation.ToLower() -eq "yes") {
+            Write-Host ""
+            Write-Host "Starting cleanup process..." -ForegroundColor $WarningColor
+            
+            $itemsToRemove = @(
+                "./sentinel-kit_server_frontend/node_modules",
+                "./sentinel-kit_server_frontend/package-lock.json",
+                "./sentinel-kit_server_frontend/dist",
+                "./sentinel-kit_server_backend/.initial_setup_done",
+                "./sentinel-kit_server_backend/composer.lock",
+                "./sentinel-kit_server_backend/symfony.lock",
+                "./sentinel-kit_server_backend/var",
+                "./sentinel-kit_server_backend/vendor",
+                "./sentinel-kit_server_backend/migrations/*",
+                "./sentinel-kit_server_backend/config/jwt/*.pem",
+                "./config/elastalert_ruleset/*",
+                "./config/caddy_server/certificates/*",
+                "./data/caddy_logs/*",
+                "./data/ftp_data/*",
+                "./data/grafana/*",
+                "./data/kibana/*",
+                "./data/log_ingest_data/auditd/*",
+                "./data/log_ingest_data/evtx/*",
+                "./data/log_ingest_data/json/*",
+                "./data/fluentbit_db/*",
+                "./data/yara_triage_data/*"
+            )
+            
+            $successCount = 0
+            $errorCount = 0
+            
+            foreach ($item in $itemsToRemove) {
+                if ($item.Contains("*")) {
+                    # Handle wildcard paths
+                    $basePath = Split-Path $item -Parent
+                    $pattern = Split-Path $item -Leaf
+                    
+                    if (Test-Path $basePath) {
+                        try {
+                            $files = Get-ChildItem -Path $basePath -Filter $pattern -ErrorAction SilentlyContinue
+                            if ($files) {
+                                Remove-Item -Path $files.FullName -Recurse -Force -ErrorAction Stop
+                                Write-Host "Removed: $item" -ForegroundColor $SuccessColor
+                                $successCount++
+                            } else {
+                                Write-Host "Skipped: $item (not found)" -ForegroundColor $GrayColor
+                            }
+                        } catch {
+                            Write-Host "Failed to remove: $item" -ForegroundColor $ErrorColor
+                            $errorCount++
+                        }
+                    } else {
+                        Write-Host "Skipped: $item (path not found)" -ForegroundColor $GrayColor
+                    }
+                } else {
+                    # Handle regular paths
+                    if (Test-Path $item) {
+                        try {
+                            Remove-Item -Path $item -Recurse -Force -ErrorAction Stop
+                            Write-Host "Removed: $item" -ForegroundColor $SuccessColor
+                            $successCount++
+                        } catch {
+                            Write-Host "Failed to remove: $item" -ForegroundColor $ErrorColor
+                            $errorCount++
+                        }
+                    } else {
+                        Write-Host "Skipped: $item (not found)" -ForegroundColor $GrayColor
+                    }
+                }
+            }
+            
+            Write-Host ""
             Write-Host "Stopping Docker containers and removing volumes..." -ForegroundColor $WarningColor
             
             if (Test-DockerCompose) {
                 Invoke-Expression "docker compose down -v"
                 
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Host "Docker containers stopped and volumes removed." -ForegroundColor $SuccessColor
+                    Write-Host "Docker containers and volumes removed successfully." -ForegroundColor $SuccessColor
+                    $successCount++
                 } else {
-                    Write-Host "Error stopping containers." -ForegroundColor $ErrorColor
-                }
-            }
-            
-            $dataDirs = @("data\mysql", "data\elasticsearch", "data\grafana", "data\kibana")
-            
-            Write-Host "Cleaning local data directories..." -ForegroundColor $WarningColor
-            
-            foreach ($dir in $dataDirs) {
-                if (Test-Path $dir) {
-                    try {
-                        Remove-Item -Path $dir -Recurse -Force
-                        Write-Host "Cleaned: $dir" -ForegroundColor $SuccessColor
-                    } catch {
-                        Write-Host "Error cleaning: $dir" -ForegroundColor $ErrorColor
-                    }
+                    Write-Host "Error stopping Docker containers. Exit Code: $LASTEXITCODE" -ForegroundColor $ErrorColor
+                    $errorCount++
                 }
             }
             
             Write-Host ""
-            Write-Host "Cleanup completed!" -ForegroundColor $SuccessColor
+            Write-Host "--------------------------------------------------------" -ForegroundColor $HeaderColor
+            Write-Host "Cleanup Summary:" -ForegroundColor $HeaderColor
+            Write-Host "Successful operations: $successCount" -ForegroundColor $SuccessColor
+            if ($errorCount -gt 0) {
+                Write-Host "Failed operations: $errorCount" -ForegroundColor $ErrorColor
+            }
+            Write-Host "--------------------------------------------------------" -ForegroundColor $HeaderColor
+            
+            if ($errorCount -eq 0) {
+                Write-Host "All user data has been successfully cleaned!" -ForegroundColor $SuccessColor
+            } else {
+                Write-Host "Cleanup completed with some errors. Check the output above." -ForegroundColor $WarningColor
+            }
         } else {
             Write-Host "Operation cancelled." -ForegroundColor $InfoColor
         }
