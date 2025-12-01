@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 echo "=== Sentinel Kit Backend Entrypoint ==="
 echo "Environment: $APP_ENV"
@@ -6,13 +6,13 @@ echo "Environment: $APP_ENV"
 chown -R www-data:www-data /var/www/html
 chown -R www-data:www-data /detection-rules
 
+su -s /bin/bash www-data << 'EOF'
 setup_symfony() {
     MARKER_FILE="/var/www/html/.initial_setup_done"
     rm -rf /var/www/html/var/cache
     rm -rf /var/www/html/public/bundles
     rm -rf /detection-rules/elastalert/*
     
-    # Vérifier si les dépendances Composer sont installées
     if [ ! -d "/var/www/html/vendor" ] || [ ! -f "/var/www/html/vendor/autoload.php" ]; then
         echo "Installing Composer dependencies..."
         composer install --no-scripts
@@ -21,17 +21,76 @@ setup_symfony() {
         echo "Composer dependencies already installed."
     fi
     
+    echo "Waiting for database to be ready..."
+    max_attempts=30
+    attempt=1
+    while [ $attempt -le $max_attempts ]; do
+        if php /var/www/html/bin/console doctrine:database:create --if-not-exists >/dev/null 2>&1; then
+            echo "Database is ready!"
+            break
+        fi
+        echo "Database not ready yet (attempt $attempt/$max_attempts), waiting 2 seconds..."
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+    
+    if [ $attempt -gt $max_attempts ]; then
+        echo "ERROR: Database is not ready after $max_attempts attempts"
+        exit 1
+    fi
+    
     if [ ! -f "$MARKER_FILE" ]; then
         echo "Running initial setup..."
-        sleep 10
+        
+        echo "Creating database if not exists..."
+        php /var/www/html/bin/console doctrine:database:create --if-not-exists
+        
+        echo "Dropping existing schema..."
+        php /var/www/html/bin/console doctrine:schema:drop --force --full-database || true
+        
+        echo "Cleaning old migrations..."
         rm -rf /var/www/html/migrations/*.php
-        php /var/www/html/bin/console doctrine:schema:drop --force --full-database
-        php /var/www/html/bin/console make:migration -n
-        php /var/www/html/bin/console doctrine:migrations:migrate -n
-        php /var/www/html/bin/console lexik:jwt:generate-keypair
+        
+        echo "Creating new migration..."
+        if ! php /var/www/html/bin/console make:migration -n; then
+            echo "ERROR: Failed to create migration"
+            exit 1
+        fi
+        
+        if [ -z "$(ls -A /var/www/html/migrations/)" ]; then
+            echo "ERROR: No migration file was created"
+            exit 1
+        fi
+        
+        echo "Applying migrations..."
+        if ! php /var/www/html/bin/console doctrine:migrations:migrate -n; then
+            echo "ERROR: Failed to apply migrations"
+            exit 1
+        fi
+        
+        echo "Verifying database schema..."
+        if ! php /var/www/html/bin/console doctrine:schema:validate; then
+            echo "WARNING: Database schema validation failed"
+        fi
+        
+        echo "Generating JWT keypair..."
+        if ! php /var/www/html/bin/console lexik:jwt:generate-keypair; then
+            echo "ERROR: Failed to generate JWT keypair"
+            exit 1
+        fi
+        
         php /var/www/html/bin/console lexik:jwt:check-config
+        
         touch "$MARKER_FILE"
-        echo "Initial setup completed."
+        echo "Initial setup completed successfully."
+    else
+        echo "Initial setup already completed (marker file exists)."
+        
+        echo "Checking if database migrations are up to date..."
+        if ! php /var/www/html/bin/console doctrine:migrations:up-to-date; then
+            echo "Database migrations are not up to date, running migrations..."
+            php /var/www/html/bin/console doctrine:migrations:migrate -n
+        fi
     fi
     
     if [ "$APP_ENV" = "prod" ]; then
@@ -44,8 +103,6 @@ setup_symfony() {
     fi
 }
 
-su -s /bin/sh www-data << 'EOF'
-$(declare -f setup_symfony)
 setup_symfony
 EOF
 
