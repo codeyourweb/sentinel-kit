@@ -20,7 +20,7 @@ show_help() {
     echo -e "  ${WHITE_COLOR}./launcher.sh <command>${RESET_COLOR}"
     echo ""
     echo -e "${INFO_COLOR}COMMANDS:${RESET_COLOR}"
-    echo -e "  ${WHITE_COLOR}run         Start the Docker stack (using existing images)${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}start       Start the Docker stack (using existing images)${RESET_COLOR}"
     echo -e "  ${WHITE_COLOR}stop        Stop the running Docker stack${RESET_COLOR}"
     echo -e "  ${WHITE_COLOR}build       Build and start the Docker stack (rebuild images)${RESET_COLOR}"
     echo -e "  ${WHITE_COLOR}clean-data  Clean all user data and stop containers${RESET_COLOR}"
@@ -34,7 +34,7 @@ show_help() {
     echo -e "  ${WHITE_COLOR}-f          Follow log output (for logs command)${RESET_COLOR}"
     echo ""
     echo -e "${INFO_COLOR}EXAMPLES:${RESET_COLOR}"
-    echo -e "  ${GRAY_COLOR}./launcher.sh run         # Start the stack${RESET_COLOR}"
+    echo -e "  ${GRAY_COLOR}./launcher.sh start       # Start the stack${RESET_COLOR}"
     echo -e "  ${GRAY_COLOR}./launcher.sh build       # Build and start${RESET_COLOR}"
     echo -e "  ${GRAY_COLOR}./launcher.sh stop        # Stop the stack${RESET_COLOR}"
     echo -e "  ${GRAY_COLOR}./launcher.sh clean-data  # Clean all data${RESET_COLOR}"
@@ -94,6 +94,55 @@ convert_shell_scripts_to_lf() {
     fi
 }
 
+wait_for_healthy_services() {
+    echo -e "${INFO_COLOR}Waiting for backend and frontend to be healthy...${RESET_COLOR}"
+    
+    local max_attempts=60
+    local attempt=0
+    local backend_healthy=false
+    local frontend_healthy=false
+    
+    while [ $attempt -lt $max_attempts ]; do
+        attempt=$((attempt + 1))
+        
+        if [ "$backend_healthy" = false ]; then
+            local backend_health=$(docker compose ps --format json sentinel-kit-app-backend 2>/dev/null)
+            if [ $? -eq 0 ] && [ -n "$backend_health" ]; then
+                local health_status=$(echo "$backend_health" | grep -o '"Health":"[^"]*"' | cut -d'"' -f4)
+                if [ "$health_status" = "healthy" ]; then
+                    echo -e "  ${SUCCESS_COLOR}Backend is healthy!${RESET_COLOR}"
+                    backend_healthy=true
+                fi
+            fi
+        fi
+        
+        if [ "$frontend_healthy" = false ]; then
+            local frontend_health=$(docker compose ps --format json sentinel-kit-app-frontend 2>/dev/null)
+            if [ $? -eq 0 ] && [ -n "$frontend_health" ]; then
+                local health_status=$(echo "$frontend_health" | grep -o '"Health":"[^"]*"' | cut -d'"' -f4)
+                if [ "$health_status" = "healthy" ]; then
+                    echo -e "  ${SUCCESS_COLOR}Frontend is healthy!${RESET_COLOR}"
+                    frontend_healthy=true
+                fi
+            fi
+        fi
+        
+        if [ "$backend_healthy" = true ] && [ "$frontend_healthy" = true ]; then
+            echo -e "${SUCCESS_COLOR}All critical services are healthy and ready!${RESET_COLOR}"
+            return 0
+        fi
+        
+        if [ $((attempt % 10)) -eq 0 ]; then
+            echo -e "  ${WARNING_COLOR}Still waiting... (attempt $attempt/$max_attempts)${RESET_COLOR}"
+        fi
+        
+        sleep 10
+    done
+    
+    echo -e "${ERROR_COLOR}Timeout: Services did not become healthy within the expected time.${RESET_COLOR}"
+    return 1
+}
+
 start_sentinel_kit() {
     echo ""
     echo -e "${HEADER_COLOR}========== STARTING SENTINELKIT ==========${RESET_COLOR}"
@@ -113,8 +162,13 @@ start_sentinel_kit() {
         echo -e "${INFO_COLOR}--------------------------------------------------------${RESET_COLOR}"
         echo -e "${INFO_COLOR}INFORMATION: The Docker stack is already running.${RESET_COLOR}"
         echo -e "${INFO_COLOR}Number of active containers: $container_count${RESET_COLOR}"
-        echo -e "${INFO_COLOR}No action taken. If you need to rebuild images, run: ./launcher.sh build${RESET_COLOR}"
+        echo -e "${INFO_COLOR}Checking health status...${RESET_COLOR}"
         echo -e "${INFO_COLOR}--------------------------------------------------------${RESET_COLOR}"
+        if wait_for_healthy_services; then
+            echo -e "${SUCCESS_COLOR}Success! The Docker stack is running and healthy.${RESET_COLOR}"
+        else
+            echo -e "${WARNING_COLOR}Warning: Some services may not be fully healthy yet.${RESET_COLOR}"
+        fi
         return
     fi
     
@@ -122,7 +176,11 @@ start_sentinel_kit() {
     
     if docker compose up -d; then
         echo "--------------------------------------------------------"
-        echo -e "${SUCCESS_COLOR}Success! The Docker stack has been launched.${RESET_COLOR}"
+        if wait_for_healthy_services; then
+            echo -e "${SUCCESS_COLOR}Success! The Docker stack has been launched and is healthy.${RESET_COLOR}"
+        else
+            echo -e "${WARNING_COLOR}Warning: Docker stack started but some services are not healthy.${RESET_COLOR}"
+        fi
         echo -e "${SUCCESS_COLOR}Containers are running in detached mode.${RESET_COLOR}"
     else
         echo -e "${ERROR_COLOR}Internal error while running 'docker compose up'. Exit Code: $?${RESET_COLOR}"
@@ -190,7 +248,11 @@ build_sentinel_kit() {
     
     if docker compose up -d --build --force-recreate; then
         echo "--------------------------------------------------------"
-        echo -e "${SUCCESS_COLOR}Success! The Docker stack has been rebuilt and started.${RESET_COLOR}"
+        if wait_for_healthy_services; then
+            echo -e "${SUCCESS_COLOR}Success! The Docker stack has been rebuilt, started and is healthy.${RESET_COLOR}"
+        else
+            echo -e "${WARNING_COLOR}Warning: Docker stack rebuilt and started but some services are not healthy.${RESET_COLOR}"
+        fi
         echo -e "${SUCCESS_COLOR}Containers are running in detached mode.${RESET_COLOR}"
     else
         echo -e "${ERROR_COLOR}Internal error while running 'docker compose up'. Exit Code: $?${RESET_COLOR}"
@@ -211,7 +273,7 @@ start_sentinel_kit_console() {
     
     if [ -z "$backend_container" ]; then
         echo -e "${ERROR_COLOR}The backend container (sentinel-kit-app-backend) is not running.${RESET_COLOR}"
-        echo -e "${INFO_COLOR}Please start the stack first using: ./launcher.sh run${RESET_COLOR}"
+        echo -e "${INFO_COLOR}Please start the stack first using: ./launcher.sh start${RESET_COLOR}"
         return
     fi
     
@@ -375,10 +437,15 @@ clear_sentinel_kit_data() {
     echo -e "${WARNING_COLOR}Starting cleanup process...${RESET_COLOR}"
     
     items_to_remove=(
+        "./sentinel-kit_server_frontend/.production_build_complete"
+        "./sentinel-kit_server_frontend/.source_hash"
         "./sentinel-kit_server_frontend/node_modules"
         "./sentinel-kit_server_frontend/package-lock.json"
         "./sentinel-kit_server_frontend/dist"
         "./sentinel-kit_server_backend/.initial_setup_done"
+        "./sentinel-kit_server_backend/.cache_ready"
+        "./sentinel-kit_server_backend/.composer_hash"
+        "./sentinel-kit_server_backend/.source_hash"
         "./sentinel-kit_server_backend/composer.lock"
         "./sentinel-kit_server_backend/symfony.lock"
         "./sentinel-kit_server_backend/var"
@@ -448,7 +515,7 @@ follow_logs="false"
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        "run"|"stop"|"build"|"clean-data"|"console"|"logs"|"status"|"help")
+        "start"|"stop"|"build"|"clean-data"|"console"|"logs"|"status"|"help")
             command="$1"
             shift
             ;;
@@ -486,7 +553,7 @@ if [ -z "$command" ]; then
 fi
 
 case "$command" in
-    "run")
+    "start")
         start_sentinel_kit
         ;;
     "stop")

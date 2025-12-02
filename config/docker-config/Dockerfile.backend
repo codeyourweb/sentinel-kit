@@ -34,8 +34,15 @@ COPY sentinel-kit_server_backend/composer.lock* /var/www/html/
 
 WORKDIR /var/www/html
 
-RUN composer install --no-scripts --no-autoloader && \
-    composer dump-autoload --no-scripts --optimize
+# Pre-install Composer dependencies for production optimization
+ARG APP_ENV=prod
+RUN if [ "$APP_ENV" = "prod" ]; then \
+        composer install --no-scripts --no-autoloader --no-dev --optimize-autoloader && \
+        composer dump-autoload --no-scripts --optimize; \
+    else \
+        composer install --no-scripts --no-autoloader && \
+        composer dump-autoload --no-scripts --optimize; \
+    fi
 
 COPY config/docker-config/backend-entrypoint.sh /opt/server-backend/backend-entrypoint.sh
 RUN chmod +x /opt/server-backend/backend-entrypoint.sh

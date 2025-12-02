@@ -12,4 +12,13 @@ RUN chmod +x /usr/local/bin/frontend-entrypoint.sh
 
 WORKDIR /app
 
+COPY sentinel-kit_server_frontend/package*.json ./
+
+ARG APP_ENV=prod
+RUN if [ "$APP_ENV" = "prod" ]; then \
+        npm install --silent; \
+    fi
+
+COPY sentinel-kit_server_frontend/ ./
+
 ENTRYPOINT ["/usr/local/bin/frontend-entrypoint.sh"]

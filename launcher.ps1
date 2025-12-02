@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("run", "stop", "build", "clean-data", "console", "logs", "status", "help")]
+    [ValidateSet("start", "stop", "build", "clean-data", "console", "logs", "status", "help")]
     [string]$Command = "help",
     [string]$ServiceName = "",
     [switch]$Follow,
@@ -23,7 +23,7 @@ function Show-Help {
     Write-Host "  .\launcher.ps1 <command>" -ForegroundColor White
     Write-Host ""
     Write-Host "COMMANDS:" -ForegroundColor $InfoColor
-    Write-Host "  run         Start the Docker stack" -ForegroundColor White
+    Write-Host "  start       Start the Docker stack" -ForegroundColor White
     Write-Host "  stop        Stop the running Docker stack" -ForegroundColor White  
     Write-Host "  build       Build and start the Docker stack" -ForegroundColor White
     Write-Host "  clean-data  Clean all user data and stop containers" -ForegroundColor White
@@ -86,6 +86,55 @@ function Convert-ShellScriptsToLF {
     }
 }
 
+function Wait-ForHealthyServices {
+    Write-Host "Waiting for backend and frontend to be healthy..." -ForegroundColor $InfoColor
+    
+    $maxAttempts = 60
+    $attempt = 0
+    $backendHealthy = $false
+    $frontendHealthy = $false
+    
+    while ($attempt -lt $maxAttempts) {
+        $attempt++
+        
+        if (-not $backendHealthy) {
+            $backendHealth = Invoke-Expression "docker compose ps --format json sentinel-kit-app-backend" -ErrorAction SilentlyContinue
+            if ($LASTEXITCODE -eq 0 -and $backendHealth) {
+                $healthStatus = ($backendHealth | ConvertFrom-Json).Health
+                if ($healthStatus -eq "healthy") {
+                    Write-Host "  Backend is healthy!" -ForegroundColor $SuccessColor
+                    $backendHealthy = $true
+                }
+            }
+        }
+        
+        if (-not $frontendHealthy) {
+            $frontendHealth = Invoke-Expression "docker compose ps --format json sentinel-kit-app-frontend" -ErrorAction SilentlyContinue
+            if ($LASTEXITCODE -eq 0 -and $frontendHealth) {
+                $healthStatus = ($frontendHealth | ConvertFrom-Json).Health
+                if ($healthStatus -eq "healthy") {
+                    Write-Host "  Frontend is healthy!" -ForegroundColor $SuccessColor
+                    $frontendHealthy = $true
+                }
+            }
+        }
+        
+        if ($backendHealthy -and $frontendHealthy) {
+            Write-Host "All critical services are healthy and ready!" -ForegroundColor $SuccessColor
+            return $true
+        }
+        
+        if ($attempt % 10 -eq 0) {
+            Write-Host "  Still waiting... (attempt $attempt/$maxAttempts)" -ForegroundColor $WarningColor
+        }
+        
+        Start-Sleep -Seconds 10
+    }
+    
+    Write-Host "Timeout: Services did not become healthy within the expected time." -ForegroundColor $ErrorColor
+    return $false
+}
+
 if ($Help) {
     Show-Help
     exit 0
@@ -95,7 +144,7 @@ switch ($Command.ToLower()) {
     "help" { 
         Show-Help 
     }
-    "run" { 
+    "start" { 
         Write-Host ""
         Write-Host "========== STARTING SENTINELKIT ==========" -ForegroundColor $HeaderColor
         
@@ -109,12 +158,21 @@ switch ($Command.ToLower()) {
         
         if ($RunningContainers) {
             Write-Host "Docker stack is already running." -ForegroundColor $InfoColor
+            if (Wait-ForHealthyServices) {
+                Write-Host "Success! The Docker stack is running and healthy." -ForegroundColor $SuccessColor
+            } else {
+                Write-Host "Warning: Some services may not be fully healthy yet." -ForegroundColor $WarningColor
+            }
         } else {
             Write-Host "Starting the Docker stack..." -ForegroundColor $InfoColor
             Invoke-Expression "docker compose up -d"
             
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "Success! The Docker stack has been launched." -ForegroundColor $SuccessColor
+                if (Wait-ForHealthyServices) {
+                    Write-Host "Success! The Docker stack has been launched and is healthy." -ForegroundColor $SuccessColor
+                } else {
+                    Write-Host "Warning: Docker stack started but some services are not healthy." -ForegroundColor $WarningColor
+                }
             } else {
                 Write-Host "Error starting containers." -ForegroundColor $ErrorColor
             }
@@ -157,7 +215,11 @@ switch ($Command.ToLower()) {
         Invoke-Expression "docker compose up -d --build --force-recreate"
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "Success! The Docker stack has been built and started." -ForegroundColor $SuccessColor
+            if (Wait-ForHealthyServices) {
+                Write-Host "Success! The Docker stack has been built, started and is healthy." -ForegroundColor $SuccessColor
+            } else {
+                Write-Host "Warning: Docker stack built and started but some services are not healthy." -ForegroundColor $WarningColor
+            }
         } else {
             Write-Host "Error building containers." -ForegroundColor $ErrorColor
         }
@@ -174,7 +236,7 @@ switch ($Command.ToLower()) {
         
         if (-not $backendContainer) {
             Write-Host "Backend container is not running." -ForegroundColor $ErrorColor
-            Write-Host "Please start the stack first using: .\launcher.ps1 run" -ForegroundColor $WarningColor
+            Write-Host "Please start the stack first using: .\launcher.ps1 start" -ForegroundColor $WarningColor
             exit 1
         }
         
@@ -311,9 +373,14 @@ switch ($Command.ToLower()) {
             Write-Host "Starting cleanup process..." -ForegroundColor $WarningColor
             
             $itemsToRemove = @(
+                "./sentinel-kit_server_frontend/.production_build_complete",
+                "./sentinel-kit_server_frontend/.source_hash",
                 "./sentinel-kit_server_frontend/node_modules",
                 "./sentinel-kit_server_frontend/package-lock.json",
                 "./sentinel-kit_server_frontend/dist",
+                "./sentinel-kit_server_backend/.cache_ready",
+                "./sentinel-kit_server_backend/.composer_hash",
+                "./sentinel-kit_server_backend/.source_hash",
                 "./sentinel-kit_server_backend/.initial_setup_done",
                 "./sentinel-kit_server_backend/composer.lock",
                 "./sentinel-kit_server_backend/symfony.lock",

@@ -26,6 +26,9 @@ services:
     restart: on-failure
     networks:
       - sentinel-kit-network
+    depends_on:
+      sentinel-kit-app-backend:
+        condition: service_healthy
 
   sentinel-kit-app-backend:
     container_name: sentinel-kit-app-backend
@@ -65,7 +68,8 @@ services:
     networks:
       - sentinel-kit-network
     depends_on:
-      - sentinel-kit-db-mysql
+      sentinel-kit-db-mysql:
+        condition: service_healthy
 
   sentinel-kit-server-rules-scanner:
     container_name: sentinel-kit-server-rules-scanner

@@ -6,19 +6,42 @@ echo "Environment: $APP_ENV"
 chown -R www-data:www-data /var/www/html
 chown -R www-data:www-data /detection-rules
 
+calculate_source_hash() {
+    find /var/www/html/src /var/www/html/config -type f \( -name "*.php" -o -name "*.yaml" -o -name "*.yml" \) 2>/dev/null | \
+    sort | xargs cat | sha256sum | cut -d' ' -f1
+}
+
+
+check_composer_changes() {
+    if [ ! -f "/var/www/html/.composer_hash" ]; then
+        return 1
+    fi
+    local current_hash
+    current_hash=$(cat /var/www/html/composer.json /var/www/html/composer.lock 2>/dev/null | sha256sum | cut -d' ' -f1)
+    local stored_hash
+    stored_hash=$(cat /var/www/html/.composer_hash 2>/dev/null)
+    [ "$current_hash" = "$stored_hash" ]
+}
+
 su -s /bin/bash www-data << 'EOF'
 setup_symfony() {
     MARKER_FILE="/var/www/html/.initial_setup_done"
+    CACHE_MARKER="/var/www/html/.cache_ready"
+    
     rm -rf /var/www/html/var/cache
     rm -rf /var/www/html/public/bundles
     rm -rf /detection-rules/elastalert/*
     
-    if [ ! -d "/var/www/html/vendor" ] || [ ! -f "/var/www/html/vendor/autoload.php" ]; then
-        echo "Installing Composer dependencies..."
-        composer install --no-scripts
+
+    if ! check_composer_changes || [ ! -d "/var/www/html/vendor" ] || [ ! -f "/var/www/html/vendor/autoload.php" ]; then
+        echo "Installing/updating Composer dependencies..."
+        composer install --no-scripts --optimize-autoloader
         composer dump-autoload --optimize
+        
+        # Save composer hash
+        cat /var/www/html/composer.json /var/www/html/composer.lock 2>/dev/null | sha256sum | cut -d' ' -f1 > /var/www/html/.composer_hash
     else
-        echo "Composer dependencies already installed."
+        echo "Composer dependencies are up-to-date - using cached vendor/."
     fi
     
     echo "Waiting for database to be ready..."
@@ -60,7 +83,7 @@ setup_symfony() {
         fi
         
         echo "Generating JWT keypair..."
-        if ! php /var/www/html/bin/console lexik:jwt:generate-keypair; then
+        if ! php /var/www/html/bin/console lexik:jwt:generate-keypair --overwrite; then
             echo "ERROR: Failed to generate JWT keypair"
             exit 1
         fi
@@ -91,13 +114,30 @@ setup_symfony() {
         fi
     fi
     
+    current_hash=$(calculate_source_hash)
     if [ "$APP_ENV" = "prod" ]; then
-        echo "Warming up production cache..."
-        php /var/www/html/bin/console cache:clear --env=prod --no-debug
-        php /var/www/html/bin/console cache:warmup --env=prod --no-debug
+        if [ -f "$CACHE_MARKER" ] && [ -f "/var/www/html/.source_hash" ]; then
+            stored_hash=$(cat /var/www/html/.source_hash 2>/dev/null)
+            if [ "$current_hash" = "$stored_hash" ]; then
+                echo "Source code unchanged - production cache is up-to-date, skipping rebuild."
+            else
+                echo "Source code changed - warming up production cache..."
+                php /var/www/html/bin/console cache:clear --env=prod --no-debug
+                php /var/www/html/bin/console cache:warmup --env=prod --no-debug
+                echo "$current_hash" > /var/www/html/.source_hash
+                touch "$CACHE_MARKER"
+            fi
+        else
+            echo "Initial cache warmup for production..."
+            php /var/www/html/bin/console cache:clear --env=prod --no-debug
+            php /var/www/html/bin/console cache:warmup --env=prod --no-debug
+            echo "$current_hash" > /var/www/html/.source_hash
+            touch "$CACHE_MARKER"
+        fi
     else
-        echo "Clearing development cache..."
+        echo "Development mode - clearing cache..."
         php /var/www/html/bin/console cache:clear
+        echo "$current_hash" > /var/www/html/.source_hash
     fi
 }
 
