@@ -5,7 +5,7 @@ scheb_two_factor:
         - Symfony\Component\Security\Http\Authenticator\Token\PostAuthenticationToken
     google:
         enabled: true
-        server_name: DataMonitor       # Server name used in QR code
-        issuer: DataMonitor server     # Issuer name used in QR code
+        server_name: Sentinel-Kit      # Server name used in QR code
+        issuer: Sentinel-Kit Server    # Issuer name used in QR code
         digits: 6                      # Number of digits in authentication code
         leeway: 5                      # Acceptable time drift in seconds, must be less or equal than 30 seconds

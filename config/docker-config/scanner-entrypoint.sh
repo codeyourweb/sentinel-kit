@@ -82,7 +82,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Creating ElastAlert writeback index if needed..."
-elastalert-create-index --config "$ELASTALERT_CONFIG_FILE" --index elastalert_status || true
+elastalert-create-index --config "$ELASTALERT_CONFIG_FILE" || true
 
 echo "Starting ElastAlert daemon..."
 echo "Prometheus metrics will be available on port $PROMETHEUS_PORT"
