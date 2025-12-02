@@ -58,6 +58,34 @@ function Get-RunningContainers {
     return $null
 }
 
+function Convert-ShellScriptsToLF {
+    Write-Host "Converting shell scripts to Unix line endings (LF)..." -ForegroundColor $InfoColor
+    
+    $shFiles = Get-ChildItem -Path "." -Recurse -Name "*.sh" -File
+    $convertedCount = 0
+    
+    foreach ($file in $shFiles) {
+        try {
+            $content = Get-Content -Path $file -Raw
+            if ($content -and $content.Contains("`r`n")) {
+                $content = $content -replace "`r`n", "`n"
+                [System.IO.File]::WriteAllText((Resolve-Path $file).Path, $content)
+                Write-Host "  Converted: $file" -ForegroundColor $GrayColor
+                $convertedCount++
+            }
+        }
+        catch {
+            Write-Host "  Warning: Failed to convert $file - $($_.Exception.Message)" -ForegroundColor $WarningColor
+        }
+    }
+    
+    if ($convertedCount -gt 0) {
+        Write-Host "Converted $convertedCount shell script(s) to Unix line endings." -ForegroundColor $SuccessColor
+    } else {
+        Write-Host "No shell scripts needed line ending conversion." -ForegroundColor $SuccessColor
+    }
+}
+
 if ($Help) {
     Show-Help
     exit 0
@@ -74,6 +102,8 @@ switch ($Command.ToLower()) {
         if (-not (Test-DockerCompose)) {
             exit 1
         }
+        
+        Convert-ShellScriptsToLF
         
         $RunningContainers = Get-RunningContainers
         
@@ -120,6 +150,8 @@ switch ($Command.ToLower()) {
         if (-not (Test-DockerCompose)) {
             exit 1
         }
+        
+        Convert-ShellScriptsToLF
         
         Write-Host "Building and starting the Docker stack..." -ForegroundColor $InfoColor
         Invoke-Expression "docker compose up -d --build --force-recreate"

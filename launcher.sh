@@ -69,6 +69,31 @@ get_running_containers() {
     docker compose ps -q 2>/dev/null
 }
 
+convert_shell_scripts_to_lf() {
+    echo -e "${INFO_COLOR}Converting shell scripts to Unix line endings (LF)...${RESET_COLOR}"
+    
+    local converted_count=0
+    
+    while IFS= read -r -d '' file; do
+        if [ -f "$file" ]; then
+            if grep -q $'\r' "$file" 2>/dev/null; then
+                if sed -i 's/\r$//' "$file" 2>/dev/null; then
+                    echo -e "  ${GRAY_COLOR}Converted: $file${RESET_COLOR}"
+                    converted_count=$((converted_count + 1))
+                else
+                    echo -e "  ${WARNING_COLOR}Warning: Failed to convert $file${RESET_COLOR}"
+                fi
+            fi
+        fi
+    done < <(find . -name "*.sh" -type f -print0 2>/dev/null)
+    
+    if [ $converted_count -gt 0 ]; then
+        echo -e "${SUCCESS_COLOR}Converted $converted_count shell script(s) to Unix line endings.${RESET_COLOR}"
+    else
+        echo -e "${SUCCESS_COLOR}No shell scripts needed line ending conversion.${RESET_COLOR}"
+    fi
+}
+
 start_sentinel_kit() {
     echo ""
     echo -e "${HEADER_COLOR}========== STARTING SENTINELKIT ==========${RESET_COLOR}"
@@ -76,6 +101,8 @@ start_sentinel_kit() {
     if ! test_docker_compose; then
         exit 1
     fi
+    
+    convert_shell_scripts_to_lf
     
     echo "--------------------------------------------------------"
     local running_containers
@@ -142,6 +169,8 @@ build_sentinel_kit() {
     if ! test_docker_compose; then
         exit 1
     fi
+    
+    convert_shell_scripts_to_lf
     
     echo "--------------------------------------------------------"
     local running_containers
