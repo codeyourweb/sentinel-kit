@@ -48,23 +48,9 @@ setup_symfony() {
         echo "Dropping existing schema..."
         php /var/www/html/bin/console doctrine:schema:drop --force --full-database || true
         
-        echo "Cleaning old migrations..."
-        rm -rf /var/www/html/migrations/*.php
-        
-        echo "Creating new migration..."
-        if ! php /var/www/html/bin/console make:migration -n; then
-            echo "ERROR: Failed to create migration"
-            exit 1
-        fi
-        
-        if [ -z "$(ls -A /var/www/html/migrations/)" ]; then
-            echo "ERROR: No migration file was created"
-            exit 1
-        fi
-        
-        echo "Applying migrations..."
-        if ! php /var/www/html/bin/console doctrine:migrations:migrate -n; then
-            echo "ERROR: Failed to apply migrations"
+        echo "Creating database schema..."
+        if ! php /var/www/html/bin/console doctrine:schema:create; then
+            echo "ERROR: Failed to create database schema"
             exit 1
         fi
         
