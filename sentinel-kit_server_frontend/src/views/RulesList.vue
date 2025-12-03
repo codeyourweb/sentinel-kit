@@ -30,6 +30,9 @@
                     <option value="createdOn">Creation Date (Newest First)</option>
                     <option value="active">Status (Active First)</option>
                     <option value="level">Severity Level (Critical to info.)</option>
+                    <option value="alerts_24h">Detections (1d - Most Active)</option>
+                    <option value="alerts_7d">Detections (7d - Most Active)</option>
+                    <option value="alerts_30d">Detections (30d - Most Active)</option>
                 </select>
             </div>
             
@@ -375,6 +378,13 @@ const sortedAndFilteredRules = computed(() => {
             const orderB = severityOrder[levelB] !== undefined ? severityOrder[levelB] : 4;
             
             return orderA - orderB;
+        }
+
+
+        if (key === 'alerts_24h' || key === 'alerts_7d' || key === 'alerts_30d') {
+            const countA = a[key] || 0;
+            const countB = b[key] || 0;
+            return countB - countA;
         }
 
         if (typeof a[key] === 'string' && typeof b[key] === 'string') {

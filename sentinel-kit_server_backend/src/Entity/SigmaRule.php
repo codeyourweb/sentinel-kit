@@ -42,6 +42,13 @@ class SigmaRule
     #[Groups(['rule_details'])]
     private Collection $versions;
 
+    /**
+     * @var Collection<int, Alert>
+     */
+    #[ORM\OneToMany(targetEntity: Alert::class, mappedBy: 'rule', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['createdOn' => 'DESC'])]
+    private Collection $alerts;
+
     #[ORM\Column]
     #[Groups(['rule_details'])]
     private ?\DateTime $createdOn = null;
@@ -51,6 +58,7 @@ class SigmaRule
     public function __construct()
     {
         $this->versions = new ArrayCollection();
+        $this->alerts = new ArrayCollection();
         $this->createdOn = new \DateTime();
     }
 
@@ -151,6 +159,35 @@ class SigmaRule
     public function setDescription(?string $description): static
     {
         $this->description = $description;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Alert>
+     */
+    public function getAlerts(): Collection
+    {
+        return $this->alerts;
+    }
+
+    public function addAlert(Alert $alert): static
+    {
+        if (!$this->alerts->contains($alert)) {
+            $this->alerts->add($alert);
+            $alert->setRule($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAlert(Alert $alert): static
+    {
+        if ($this->alerts->removeElement($alert)) {
+            if ($alert->getRule() === $this) {
+                $alert->setRule(null);
+            }
+        }
 
         return $this;
     }

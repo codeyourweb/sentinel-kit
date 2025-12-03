@@ -47,6 +47,9 @@ services:
       - DATAMONITOR_SERVER_TOKEN=${SENTINELKIT_DATAMONITOR_SERVER_TOKEN}
       - CORS_ALLOW_ORIGIN=https://${SENTINELKIT_FRONTEND_HOSTNAME}
       - FLUENTBIT_SERVER_URL=http://sentinel-kit-server-fluentbit:24224
+      - ELASTICSEARCH_HOST=sentinel-kit-db-elasticsearch-es01:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_SSL=true
       - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
     volumes:
       - ./config/docker-config/backend-entrypoint.sh:/usr/local/bin/backend-entrypoint.sh:ro
@@ -69,6 +72,8 @@ services:
       - sentinel-kit-network
     depends_on:
       sentinel-kit-db-mysql:
+        condition: service_healthy
+      sentinel-kit-db-elasticsearch-es01:
         condition: service_healthy
 
   sentinel-kit-server-rules-scanner:

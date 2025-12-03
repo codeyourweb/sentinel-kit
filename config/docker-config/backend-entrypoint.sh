@@ -143,6 +143,40 @@ setup_symfony() {
 setup_symfony
 EOF
 
+echo "=== Setting up ElastAlert sync daemon ==="
+chmod +x /usr/local/bin/elastalert-sync-daemon.sh
+chown www-data:www-data /usr/local/bin/elastalert-sync-daemon.sh
+
+echo "Creating ElastAlert sync daemon script..."
+
+touch /var/log/elastalert-sync.log
+chown www-data:www-data /var/log/elastalert-sync.log
+
+cat > /tmp/elastalert-sync-daemon.sh << 'EOF'
+#!/bin/bash
+
+echo "$(date): Starting ElastAlert sync daemon"
+
+while true; do
+    echo "$(date): Running ElastAlert sync..."
+    
+    # Run the sync command from the correct directory
+    cd /var/www/html
+    if php bin/console app:alerts:sync --since="-1 minute" 2>&1; then
+        echo "$(date): Sync completed successfully"
+    else
+        echo "$(date): Sync failed with exit code $?"
+    fi
+    
+    # Wait 30 seconds before next sync
+    sleep 30
+done
+EOF
+
+chmod +x /tmp/elastalert-sync-daemon.sh
+echo "Starting ElastAlert sync daemon..."
+su -s /bin/bash www-data -c '/tmp/elastalert-sync-daemon.sh' &
+
 if [ "$APP_ENV" = "prod" ]; then
     echo "Starting PRODUCTION mode with Nginx + PHP-FPM..."
     

@@ -74,17 +74,17 @@
                 <span class="flex items-center mr-6">Detections: </span>
                 <span class="flex items-center space-x-1">
                     <span class="icon-[solar--clock-circle-broken] w-4 h-4 text-orange-500"></span>
-                    <span class="font-bold text-gray-700">{{ props.rule.detections_24h || 0 }}</span>
+                    <span class="font-bold text-gray-700">{{ props.rule.alerts_24h || 0 }}</span>
                     <span>(24h)</span>
                 </span>
                 <span class="flex items-center space-x-1">
                     <span class="icon-[solar--calendar-mark-bold] w-4 h-4 text-orange-500"></span>
-                    <span class="font-bold text-gray-700">{{ props.rule.detections_7d || 0 }}</span>
+                    <span class="font-bold text-gray-700">{{ props.rule.alerts_7d || 0 }}</span>
                     <span>(7j)</span>
                 </span>
                 <span class="flex items-center space-x-1">
                     <span class="icon-[solar--calendar-bold] w-4 h-4 text-orange-500"></span>
-                    <span class="font-bold text-gray-700">{{ props.rule.detections_30d || 0 }}</span>
+                    <span class="font-bold text-gray-700">{{ props.rule.alerts_30d || 0 }}</span>
                     <span>(30j)</span>
                 </span>
             </div>
