@@ -301,9 +301,14 @@ switch ($Command.ToLower()) {
         $serviceMap = @{
             'backend' = 'sentinel-kit-app-backend'
             'frontend' = 'sentinel-kit-app-frontend'
-            'mysql' = 'sentinel-kit-mysql'
-            'elasticsearch' = 'sentinel-kit-elasticsearch'
-            'kibana' = 'sentinel-kit-kibana'
+            'mysql' = 'sentinel-kit-db-mysql'
+            'elasticsearch' = 'sentinel-kit-db-elasticsearch-es01'
+            'kibana' = 'sentinel-kit-utils-kibana'
+            'scanner' = 'sentinel-kit-server-rules-scanner'
+            'forwarder' = 'sentinel-kit-server-fluentbit'
+            'caddy' = 'sentinel-kit-server-caddy'
+            'grafana' = 'sentinel-kit-utils-grafana'
+            'prometheus' = 'sentinel-kit-utils-prometheus'
         }
         
         if ($ServiceName) {

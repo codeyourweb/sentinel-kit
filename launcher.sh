@@ -335,12 +335,13 @@ show_logs() {
         ["backend"]="sentinel-kit-app-backend"
         ["frontend"]="sentinel-kit-app-frontend"
         ["mysql"]="sentinel-kit-db-mysql"
-        ["elasticsearch"]="sentinel-kit-server-elasticsearch"
-        ["kibana"]="sentinel-kit-server-kibana"
-        ["fluentbit"]="sentinel-kit-server-fluentbit"
+        ["elasticsearch"]="sentinel-kit-db-elasticsearch-es01"
+        ["kibana"]="sentinel-kit-utils-kibana"
+        ["scanner"]="sentinel-kit-server-rules-scanner"
+        ["forwarder"]="sentinel-kit-server-fluentbit"
         ["caddy"]="sentinel-kit-server-caddy"
-        ["grafana"]="sentinel-kit-server-grafana"
-        ["prometheus"]="sentinel-kit-server-prometheus"
+        ["grafana"]="sentinel-kit-utils-grafana"
+        ["prometheus"]="sentinel-kit-utils-prometheus"
     )
     
     local actual_service_name="$service_name"

@@ -30,7 +30,6 @@ setup_symfony() {
     
     rm -rf /var/www/html/var/cache
     rm -rf /var/www/html/public/bundles
-    rm -rf /detection-rules/elastalert/*
     
 
     if ! check_composer_changes || [ ! -d "/var/www/html/vendor" ] || [ ! -f "/var/www/html/vendor/autoload.php" ]; then

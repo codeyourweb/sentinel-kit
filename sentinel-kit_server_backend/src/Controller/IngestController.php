@@ -54,7 +54,7 @@ class IngestController extends AbstractController{
         }
 
         foreach ($inputData as $k=>$v) {
-            $inputData[$k]['target_index'] = $datasource->getTargetIndex();
+            $inputData[$k]['target_index'] = "sentinelkit-" . $datasource->getTargetIndex();
         }
 
         if ($_ENV['FLUENTBIT_SERVER_URL'] === null || $_ENV['FLUENTBIT_SERVER_URL'] === '') {

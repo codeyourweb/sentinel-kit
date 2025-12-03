@@ -51,4 +51,40 @@ echo "Waiting for Elasticsearch availability";
 until curl -s --cacert config/certs/ca/ca.crt https://sentinel-kit-db-elasticsearch-es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
 echo "Setting kibana_system password";
 until curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:${ELASTICSEARCH_PASSWORD}" -H "Content-Type: application/json" https://sentinel-kit-db-elasticsearch-es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"s3nt1n3lkit_k1b4n4_syst3m_p4sswd\"}" | grep -q "^{}"; do sleep 10; done;
+
+echo "Creating sentinelkit-logs index template with higher priority";
+curl -s -X PUT --cacert config/certs/ca/ca.crt -u "elastic:${ELASTICSEARCH_PASSWORD}" \
+  -H "Content-Type: application/json" \
+  https://sentinel-kit-db-elasticsearch-es01:9200/_index_template/sentinelkit-logs \
+  -d '{
+    "index_patterns": ["sentinelkit-*"],
+    "priority": 300,
+    "data_stream": {},
+    "template": {
+      "settings": {
+        "index.lifecycle.name": "logs"
+      }
+    },
+    "composed_of": ["logs@settings", "logs@mappings", "ecs@mappings"]
+  }';
+
+echo "Sentinelkit logs template created successfully";
+
+echo "Waiting for Kibana availability";
+until curl -s http://sentinel-kit-utils-kibana:5601/api/status | grep -q '"level":"available"'; do sleep 10; done;
+
+echo "Creating Kibana data view for sentinelkit-* logs";
+curl -s -X POST "http://sentinel-kit-utils-kibana:5601/api/data_views/data_view" \
+  -H "Content-Type: application/json" \
+  -H "kbn-xsrf: true" \
+  -u "elastic:${ELASTICSEARCH_PASSWORD}" \
+  -d '{
+    "data_view": {
+      "title": "sentinelkit-*",
+      "name": "Sentinel-Kit Logs",
+      "timeFieldName": "@timestamp"
+    }
+  }';
+
+echo "Kibana data view created successfully";
 echo "All done!"

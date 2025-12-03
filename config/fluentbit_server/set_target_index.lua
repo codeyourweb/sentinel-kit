@@ -2,7 +2,7 @@ function set_target_index(tag, timestamp, record)
     local exit_code = 0
 
     if record["target_index"] == nil then
-        record["target_index"] = "undefined-index"
+        record["target_index"] = "sentinelkit-undefined-index"
         exit_code = 1
     end
 

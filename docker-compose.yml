@@ -228,9 +228,9 @@ services:
     restart: on-failure
     volumes:
       -  sentinel-kit_certificates_elasticsearch:/usr/share/elasticsearch/config/certs
-      - ./config/elasticsearch/ca-setup.sh:/usr/share/elasticsearch/ca-setup.sh:ro
+      - ./config/elasticsearch/es-setup.sh:/usr/share/elasticsearch/es-setup.sh:ro
     user: "0"
-    command: 'sh -c "/usr/share/elasticsearch/ca-setup.sh"'
+    command: 'sh -c "/usr/share/elasticsearch/es-setup.sh"'
     environment:
       - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
       - ELASTICSEARCH_CLUSTER_MODE=${ELASTICSEARCH_CLUSTER_MODE}
