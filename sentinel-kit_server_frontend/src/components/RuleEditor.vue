@@ -54,7 +54,7 @@ const emit = defineEmits(['update:modelValue']);
 
 const editorOptions = computed(() => ({
   automaticLayout: true,
-  minimap: { enabled: true },
+  minimap: { enabled: false },
   readOnly: props.readOnly,
   tabSize: 2,
   scrollBeyondLastLine: false, 
@@ -63,7 +63,7 @@ const editorOptions = computed(() => ({
 
 const diffOptions = computed(() => ({
   automaticLayout: true,
-  minimap: { enabled: true },
+  minimap: { enabled: false },
   readOnly: true, 
   tabSize: 2,
   scrollBeyondLastLine: false, 

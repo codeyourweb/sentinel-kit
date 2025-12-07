@@ -38,7 +38,6 @@
                 <a 
                     @click.stop="toggleLatestDiff" 
                     class="btn btn-primary text-xs font-medium px-3 py-1 rounded transition shadow-sm"
-                    :class="isLatestDiffToggled ? 'btn btn-primary text-white' : 'btn btn-primary'"
                 >
                     <span v-if="isLatestDiffToggled">
                         Hide diff vs previous
@@ -149,7 +148,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const route = useRoute();
 const emit = defineEmits(['show-notification']);
 
-const code = ref("Chargement des données de la règle...");
+const code = ref("Loading rule data...");
 const details = ref(null);
 const currentVersionId = ref(null);
 const originalContent = ref('');
@@ -359,8 +358,8 @@ const fetchRuleData = () => {
     const ruleId = route.params.id; 
     
     if (!ruleId) {
-      console.error('Erreur: ID de la règle non trouvé.');
-      code.value = "Erreur de chargement: ID manquant.";
+      console.error('Error: Rule ID not found.');
+      code.value = "Loading error: Missing ID.";
       return;
     }
     

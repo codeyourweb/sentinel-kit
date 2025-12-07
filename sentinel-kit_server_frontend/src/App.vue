@@ -36,7 +36,7 @@
         </aside>
 
         <div :class="{ 'ml-64': !isCollapsed, 'ml-20': isCollapsed }" class="flex-1 flex flex-col transition-all duration-300 ease-in-out">
-            <main class="p-6 flex-1 overflow-y-auto">
+            <main class="flex-1 overflow-y-auto">
                 <RouterView @show-notification="showNotification" />
             </main>
         </div>
@@ -124,6 +124,7 @@ import SSLChecker from './components/SSLChecker.vue';
 const router = useRouter();
 const isLoggedIn = ref(false);
 const isCollapsed = ref(true);
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Notification system
 const notification = ref({
@@ -161,18 +162,42 @@ const hideNotification = () => {
 onMounted(() => {
     const token = localStorage.getItem('auth_token');
     isLoggedIn.value = !!token;
+
+    // if route is not login or logout, check auth
+    const currentRoute = router.currentRoute.value.name;
+    if (currentRoute !== 'Login' && currentRoute !== 'Logout') {
+        checkAuth();
+    }
 });
 
 const logout = () => {
     router.push({ name: 'Logout' });
 };
 
+// Authentication check
+const checkAuth = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}/user/profile`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            }
+        })
+        if (response.status === 401) {
+            localStorage.removeItem('auth_token')
+            router.push({ name: 'Login' })
+        }
+    } catch (error) {
+        console.error('Error checking authentication:', error)
+    }
+}
+
 // Side menu items
 const menuItems = [
 { name: 'Home', icon: 'icon-[svg-spinners--blocks-wave]', route: 'Home' },
 { name: 'Rulesets', icon: 'icon-[carbon--rule-draft]', route: 'RulesList' },
+{ name: 'Alerts', icon: 'icon-[solar--eye-scan-broken]', route: 'AlertsList' },
 { name: 'Logs', icon: 'icon-[icon-park-outline--log]', route: 'Kibana' },
-{ name: 'Alerts', icon: 'icon-[solar--eye-scan-broken]', route: 'Home' },
 { name: 'Endpoint detection', icon: 'icon-[line-md--computer-twotone]', route: 'Home' },
 { name: 'Perf. monitoring', icon: 'icon-[material-symbols--monitor-heart-outline]', route: 'Grafana' }
 ];

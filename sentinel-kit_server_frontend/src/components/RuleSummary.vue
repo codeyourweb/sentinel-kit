@@ -129,7 +129,7 @@
                 </a>
                 <a
                     @click="confirmDelete"
-                    class="btn btn-primary px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition duration-150"
+                    class="btn btn-primary px-4 py-2 rounded-lg transition duration-150"
                 >
                     Remove
                 </a>

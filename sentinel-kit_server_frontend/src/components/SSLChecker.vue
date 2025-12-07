@@ -55,7 +55,7 @@
                   <a 
                     v-if="issue.status === 'ssl_error'"
                     @click="openApprovalTab(issue.url)"
-                    class="btn btn-primary text-white text-xs px-3 py-1 rounded-md transition-colors duration-150"
+                    class="btn btn-primary text-xs px-3 py-1 rounded-md transition-colors duration-150"
                   >
                     Approve TLS
                   </a>

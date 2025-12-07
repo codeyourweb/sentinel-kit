@@ -71,6 +71,12 @@ const router = createRouter({
             name: 'RuleCreate',
             component: () => import('./views/RuleCreate.vue'),
             meta: { requiresAuth: true }
+        },
+        {
+            path: '/alerts',
+            name: 'AlertsList',
+            component: () => import('./views/AlertsList.vue'),
+            meta: { requiresAuth: true }
         }
 
     ]

@@ -182,12 +182,20 @@ class SigmaController extends AbstractController{
             return new JsonResponse(['error' => 'The new version content is identical to the latest version'], Response::HTTP_BAD_REQUEST);
         }
 
+        if($rule->isActive()){
+            $this->elastalertValidator->removeElastalertRule($latestVersion);
+        }
 
         try {
             $this->entityManger->persist($newRuleVersion);
             $this->entityManger->flush();
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Failed to save the new version: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        $e = $this->elastalertValidator->createElastalertRule($newRuleVersion);
+        if (isset($e['error'])) {
+            return new JsonResponse(['error' => $e['error']], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         return new JsonResponse(['error' => '', 'version_id' => $newRuleVersion->getId()], Response::HTTP_OK);
@@ -198,6 +206,10 @@ class SigmaController extends AbstractController{
         $rule = $this->entityManger->getRepository(SigmaRule::class)->find($ruleId);
         if (!$rule) {
             return new JsonResponse(['error' => 'Rule not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        if($rule->isActive()){
+            $this->elastalertValidator->removeElastalertRule($rule->getRuleLatestVersion());
         }
 
         $this->entityManger->remove($rule);

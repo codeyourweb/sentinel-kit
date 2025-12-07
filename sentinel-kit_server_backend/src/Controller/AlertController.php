@@ -35,6 +35,9 @@ class AlertController extends AbstractController
         $page = max(1, $request->query->getInt('page', 1));
         $limit = min(100, max(1, $request->query->getInt('limit', 20)));
         $since = $request->query->get('since');
+        $startDate = $request->query->get('startDate');
+        $endDate = $request->query->get('endDate');
+        $filter = $request->query->get('filter');
         
         $qb = $this->entityManager->getRepository(Alert::class)->createQueryBuilder('a')
             ->leftJoin('a.rule', 'r')
@@ -42,13 +45,38 @@ class AlertController extends AbstractController
             ->addSelect('r', 'v')
             ->orderBy('a.createdOn', 'DESC');
 
-        if ($since) {
+        $whereConditions = [];
+        $parameters = [];
+
+        if ($startDate && $endDate) {
+            try {
+                $start = new \DateTime($startDate);
+                $end = new \DateTime($endDate);
+                $whereConditions[] = 'a.createdOn >= :startDate AND a.createdOn <= :endDate';
+                $parameters['startDate'] = $start;
+                $parameters['endDate'] = $end;
+            } catch (\Exception $e) {
+                return new JsonResponse(['error' => 'Invalid date format for startDate or endDate parameter'], Response::HTTP_BAD_REQUEST);
+            }
+        } elseif ($since) {
             try {
                 $sinceDate = new \DateTime($since);
-                $qb->where('a.createdOn >= :since')
-                   ->setParameter('since', $sinceDate);
+                $whereConditions[] = 'a.createdOn >= :since';
+                $parameters['since'] = $sinceDate;
             } catch (\Exception $e) {
                 return new JsonResponse(['error' => 'Invalid date format for since parameter'], Response::HTTP_BAD_REQUEST);
+            }
+        }
+
+        if ($filter && trim($filter)) {
+            $whereConditions[] = '(r.title LIKE :filter OR r.description LIKE :filter)';
+            $parameters['filter'] = '%' . trim($filter) . '%';
+        }
+
+        if (!empty($whereConditions)) {
+            $qb->where(implode(' AND ', $whereConditions));
+            foreach ($parameters as $key => $value) {
+                $qb->setParameter($key, $value);
             }
         }
 
@@ -60,7 +88,13 @@ class AlertController extends AbstractController
         $totalQb = $this->entityManager->getRepository(Alert::class)->createQueryBuilder('a')
             ->select('COUNT(a.id)');
         
-        if ($since) {
+        if ($startDate && $endDate) {
+            $start = new \DateTime($startDate);
+            $end = new \DateTime($endDate);
+            $totalQb->where('a.createdOn >= :startDate AND a.createdOn <= :endDate')
+                    ->setParameter('startDate', $start)
+                    ->setParameter('endDate', $end);
+        } elseif ($since) {
             $sinceDate = new \DateTime($since);
             $totalQb->where('a.createdOn >= :since')
                     ->setParameter('since', $sinceDate);

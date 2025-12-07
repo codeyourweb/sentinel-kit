@@ -91,6 +91,34 @@ class ElasticsearchService
             return ['status' => 'unavailable'];
         }
     }
+    public function rawQuery(array $queryData): array
+    {
+        try {
+            $index = $queryData['index'] ?? 'sentinelkit-*';
+            
+            $bodyData = $queryData;
+            unset($bodyData['index']);
+            
+            $params = [
+                'index' => $index,
+                'body' => $bodyData
+            ];
+
+            $this->logger->info('Elasticsearch raw query execution', [
+                'index' => $index,
+                'query_keys' => array_keys($bodyData)
+            ]);
+            
+            $response = $this->client->search($params);
+            return $response->asArray();
+        } catch (\Exception $e) {
+            $this->logger->error('Elasticsearch raw query error', [
+                'error' => $e->getMessage(),
+                'query' => $queryData
+            ]);
+            throw $e;
+        }
+    }
 
     public function getClient(): Client
     {

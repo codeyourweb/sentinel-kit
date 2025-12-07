@@ -1,223 +1,225 @@
 <template>
-    <a class="btn btn-primary float-right mb-4 mt-4 text-white rounded" @click="$router.push({ name: 'RuleCreate' })">
-        <span class="icon-[material-symbols--save-rounded] bg-white text-white"></span>
-        Create new rule
-    </a>
-    <h1 class="text-4xl font-extrabold text-gray-900 text-left m-4">Detection rules list</h1>
-    <br class="clear-both" />
-    <div v-if="rules.length > 0" class="space-y-4">
-        <div class="flex flex-col gap-4 p-4 border border-orange-400 bg-white shadow-lg">
-            <div class="flex flex-wrap items-center gap-4">
-                <p class="text-gray-600 flex-shrink-0 text-sm">
-                    Showing {{ paginatedRules.length }} of {{ sortedAndFilteredRules.length }} rules.
-                </p>
-
-                <input 
-                    type="text" 
-                    placeholder="Search title or description..." 
-                    v-model="searchQuery" 
-                    class="p-2 border border-gray-300 rounded-lg shadow-sm flex-grow min-w-[200px]" 
-                />
-                
-                <select v-model="pageSize" @change="updatePageSize($event.target.value)" class="p-2 border border-gray-300 rounded-lg shadow-sm">
-                    <option :value="20">20 per page</option>
-                    <option :value="100">100 per page</option>
-                    <option :value="1000">1000 per page</option>
-                </select>
-
-                <select v-model="sortKey" @change="updateSort" class="p-2 border border-gray-300 rounded-lg shadow-sm">
-                    <option value="title">Sort by Title (A-Z)</option>
-                    <option value="createdOn">Creation Date (Newest First)</option>
-                    <option value="active">Status (Active First)</option>
-                    <option value="level">Severity Level (Critical to info.)</option>
-                    <option value="alerts_24h">Detections (1d - Most Active)</option>
-                    <option value="alerts_7d">Detections (7d - Most Active)</option>
-                    <option value="alerts_30d">Detections (30d - Most Active)</option>
-                </select>
-            </div>
-            
-            <div v-if="searchQuery.trim().length > 0 && sortedAndFilteredRules.length > 0" class="mt-4">
+    <div class="container mx-auto px-6">
+        <a class="btn btn-primary float-right mb-4 mt-4 rounded" @click="$router.push({ name: 'RuleCreate' })">
+            <span class="icon-[material-symbols--save-rounded] bg-white text-white"></span>
+            Create new rule
+        </a>
+        <h1 class="text-4xl font-extrabold text-gray-900 text-left m-4">Detection rules list</h1>
+        <br class="clear-both" />
+        <div v-if="rules.length > 0" class="space-y-4">
+            <div class="flex flex-col gap-4 p-4 border border-orange-400 bg-white shadow-lg">
                 <div class="flex flex-wrap items-center gap-4">
-                    <div class="flex items-center space-x-2">
-                        <span class="icon-[material-symbols--group-work] w-5 h-5 text-orange-400 bg-orange-400"></span>
-                        <span class="text-orange-800 font-medium text-sm">
-                            Bulk actions on {{ sortedAndFilteredRules.length }} filtered rule{{ sortedAndFilteredRules.length > 1 ? 's' : '' }}:
-                        </span>
-                    </div>
+                    <p class="text-gray-600 flex-shrink-0 text-sm">
+                        Showing {{ paginatedRules.length }} of {{ sortedAndFilteredRules.length }} rules.
+                    </p>
+
+                    <input 
+                        type="text" 
+                        placeholder="Search title or description..." 
+                        v-model="searchQuery" 
+                        class="p-2 border border-gray-300 rounded-lg shadow-sm flex-grow min-w-[200px]" 
+                    />
                     
-                    <div class="flex gap-2">
-                        <a 
-                            @click="handleBulkActionClick('activate', $event)"
-                            class="btn btn-success btn-sm px-3 py-1 text-xs font-medium rounded transition duration-150"
-                            :class="{
-                                'text-green-800 bg-green-100 border border-green-300 hover:bg-green-200 cursor-pointer': !isBulkActionRunning,
-                                'text-gray-500 bg-gray-100 border border-gray-300 cursor-not-allowed pointer-events-none': isBulkActionRunning
-                            }"
-                        >
-                            <span class="icon-[material-symbols--toggle-on] w-4 h-4 mr-1"></span>
-                            Activate All
-                        </a>
+                    <select v-model="pageSize" @change="updatePageSize($event.target.value)" class="p-2 border border-gray-300 rounded-lg shadow-sm">
+                        <option :value="20">20 per page</option>
+                        <option :value="100">100 per page</option>
+                        <option :value="1000">1000 per page</option>
+                    </select>
+
+                    <select v-model="sortKey" @change="updateSort" class="p-2 border border-gray-300 rounded-lg shadow-sm">
+                        <option value="title">Sort by Title (A-Z)</option>
+                        <option value="createdOn">Creation Date (Newest First)</option>
+                        <option value="active">Status (Active First)</option>
+                        <option value="level">Severity Level (Critical to info.)</option>
+                        <option value="alerts_24h">Detections (1d - Most Active)</option>
+                        <option value="alerts_7d">Detections (7d - Most Active)</option>
+                        <option value="alerts_30d">Detections (30d - Most Active)</option>
+                    </select>
+                </div>
+                
+                <div v-if="searchQuery.trim().length > 0 && sortedAndFilteredRules.length > 0" class="mt-4">
+                    <div class="flex flex-wrap items-center gap-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="icon-[material-symbols--group-work] w-5 h-5 text-orange-400 bg-orange-400"></span>
+                            <span class="text-orange-800 font-medium text-sm">
+                                Bulk actions on {{ sortedAndFilteredRules.length }} filtered rule{{ sortedAndFilteredRules.length > 1 ? 's' : '' }}:
+                            </span>
+                        </div>
                         
-                        <a 
-                            @click="handleBulkActionClick('deactivate', $event)"
-                            class="btn btn-warning btn-sm px-3 py-1 text-xs font-medium rounded transition duration-150"
-                            :class="{
-                                'text-yellow-800 bg-yellow-100 border border-yellow-300 hover:bg-yellow-200 cursor-pointer': !isBulkActionRunning,
-                                'text-gray-500 bg-gray-100 border border-gray-300 cursor-not-allowed pointer-events-none': isBulkActionRunning
-                            }"
-                        >
-                            <span class="icon-[material-symbols--toggle-off] w-4 h-4 mr-1"></span>
-                            Deactivate All
-                        </a>
+                        <div class="flex gap-2">
+                            <a 
+                                @click="handleBulkActionClick('activate', $event)"
+                                class="btn btn-success btn-sm px-3 py-1 text-xs font-medium rounded transition duration-150"
+                                :class="{
+                                    'text-green-800 bg-green-100 border border-green-300 hover:bg-green-200 cursor-pointer': !isBulkActionRunning,
+                                    'text-gray-500 bg-gray-100 border border-gray-300 cursor-not-allowed pointer-events-none': isBulkActionRunning
+                                }"
+                            >
+                                <span class="icon-[material-symbols--toggle-on] w-4 h-4 mr-1"></span>
+                                Activate All
+                            </a>
+                            
+                            <a 
+                                @click="handleBulkActionClick('deactivate', $event)"
+                                class="btn btn-warning btn-sm px-3 py-1 text-xs font-medium rounded transition duration-150"
+                                :class="{
+                                    'text-yellow-800 bg-yellow-100 border border-yellow-300 hover:bg-yellow-200 cursor-pointer': !isBulkActionRunning,
+                                    'text-gray-500 bg-gray-100 border border-gray-300 cursor-not-allowed pointer-events-none': isBulkActionRunning
+                                }"
+                            >
+                                <span class="icon-[material-symbols--toggle-off] w-4 h-4 mr-1"></span>
+                                Deactivate All
+                            </a>
+                            
+                            <a 
+                                @click="handleBulkActionClick('delete', $event)"
+                                class="btn btn-error btn-sm px-3 py-1 text-xs font-medium rounded transition duration-150"
+                                :class="{
+                                    'text-red-800 bg-red-100 border border-red-300 hover:bg-red-200 cursor-pointer': !isBulkActionRunning,
+                                    'text-gray-500 bg-gray-100 border border-gray-300 cursor-not-allowed pointer-events-none': isBulkActionRunning
+                                }"
+                            >
+                                <span class="icon-[material-symbols--delete-sweep] w-4 h-4 mr-1"></span>
+                                Delete All
+                            </a>
+                        </div>
                         
-                        <a 
-                            @click="handleBulkActionClick('delete', $event)"
-                            class="btn btn-error btn-sm px-3 py-1 text-xs font-medium rounded transition duration-150"
-                            :class="{
-                                'text-red-800 bg-red-100 border border-red-300 hover:bg-red-200 cursor-pointer': !isBulkActionRunning,
-                                'text-gray-500 bg-gray-100 border border-gray-300 cursor-not-allowed pointer-events-none': isBulkActionRunning
-                            }"
-                        >
-                            <span class="icon-[material-symbols--delete-sweep] w-4 h-4 mr-1"></span>
-                            Delete All
-                        </a>
-                    </div>
-                    
-                    <div v-if="isBulkActionRunning" class="flex items-center space-x-2 text-orange-600">
-                        <span class="icon-[svg-spinners--ring-resize] w-4 h-4 animate-spin"></span>
-                        <span class="text-sm">Processing...</span>
+                        <div v-if="isBulkActionRunning" class="flex items-center space-x-2 text-orange-600">
+                            <span class="icon-[svg-spinners--ring-resize] w-4 h-4 animate-spin"></span>
+                            <span class="text-sm">Processing...</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <ul class="mt-6 space-y-3">
-        <li v-for="rule in paginatedRules" :key="rule.id">
-            <RuleSummary 
-                :rule="rule" 
-                :isDeleting="deletingRules.has(rule.id)"
-                @update:ruleStatus="handleStatusUpdate" 
-                @deleteRule="handleDeleteRule"
-                @show-notification="(notification) => emit('show-notification', notification)"
-            />
-        </li>
-    </ul>
+        <ul class="mt-6 space-y-3">
+            <li v-for="rule in paginatedRules" :key="rule.id">
+                <RuleSummary 
+                    :rule="rule" 
+                    :isDeleting="deletingRules.has(rule.id)"
+                    @update:ruleStatus="handleStatusUpdate" 
+                    @deleteRule="handleDeleteRule"
+                    @show-notification="(notification) => emit('show-notification', notification)"
+                />
+            </li>
+        </ul>
 
-    <div v-if="totalPages > 1" class="pagination-controls flex justify-center items-center gap-2 mt-6">
-        <a 
-            @click="goToPage(currentPage - 1)" 
-            :disabled="currentPage === 1"
-            class="px-3 py-1 border rounded-lg text-gray-700 bg-white hover:bg-gray-100 disabled:opacity-50"
-        >
-            &laquo; Previous
-        </a>
-
-        <template v-for="(page, index) in visiblePages" :key="index">
-            <span v-if="page === '...'" class="px-2 text-gray-500">...</span>
+        <div v-if="totalPages > 1" class="pagination-controls flex justify-center items-center gap-2 mt-6">
             <a 
-                v-else
-                @click="goToPage(page)" 
-                :class="{ 
-                    'bg-orange-400 text-white border-orange-400': page === currentPage, 
-                    'bg-white text-gray-700 border-gray-300 hover:bg-gray-100': page !== currentPage 
-                }"
-                class="px-3 py-1 border rounded-lg transition-colors duration-150"
+                @click="goToPage(currentPage - 1)" 
+                :disabled="currentPage === 1"
+                class="px-3 py-1 border rounded-lg text-gray-700 bg-white hover:bg-gray-100 disabled:opacity-50"
             >
-                {{ page }}
+                &laquo; Previous
             </a>
-        </template>
-        
-        <a 
-            @click="goToPage(currentPage + 1)" 
-            :disabled="currentPage === totalPages"
-            class="px-3 py-1 border rounded-lg text-gray-700 bg-white hover:bg-gray-100 disabled:opacity-50"
-        >
-            Next &raquo;
-        </a>
-    </div>
 
-    <p v-if="isLoading" class="mt-6 text-center text-gray-500">Loading rules...</p>
-    <p v-else-if="rules.length === 0" class="mt-6 text-center text-gray-500">No detection rule stored yet</p>
-
-    <div 
-        v-if="bulkActionModal.visible" 
-        class="flex fixed inset-0 bg-gray-200 bg-opacity-80 backdrop-opacity-80 items-center justify-center z-50"
-        @click="closeBulkActionModal"
-    >
-        <div 
-            class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl"
-            @click.stop
-        >
-            <div class="flex items-center mb-4">
-                <span 
-                    class="w-6 h-6 mr-3"
-                    :class="{
-                        'icon-[material-symbols--warning] text-red-500': bulkActionModal.action === 'delete',
-                        'icon-[material-symbols--info] text-orange-400': bulkActionModal.action !== 'delete'
+            <template v-for="(page, index) in visiblePages" :key="index">
+                <span v-if="page === '...'" class="px-2 text-gray-500">...</span>
+                <a 
+                    v-else
+                    @click="goToPage(page)" 
+                    :class="{ 
+                        'bg-orange-400 text-white border-orange-400': page === currentPage, 
+                        'bg-white text-gray-700 border-gray-300 hover:bg-gray-100': page !== currentPage 
                     }"
-                ></span>
-                <h3 class="text-lg font-semibold text-gray-900">
-                    Confirm bulk action
-                </h3>
-            </div>
-            
-            <p class="text-gray-600 mb-6">
-                <span v-if="bulkActionModal.action === 'activate'">
-                    <template v-if="getRulesCountForAction('activate') > 0">
-                        Are you sure you want to <strong>activate</strong> {{ getRulesCountForAction('activate') }} rule{{ getRulesCountForAction('activate') > 1 ? 's' : '' }}?
-                        <span v-if="getRulesCountForAction('activate') < sortedAndFilteredRules.length" class="text-sm text-gray-500">
-                            <br>({{ sortedAndFilteredRules.length - getRulesCountForAction('activate') }} rule{{ sortedAndFilteredRules.length - getRulesCountForAction('activate') > 1 ? 's are' : ' is' }} already active)
-                        </span>
-                    </template>
-                    <template v-else>
-                        All {{ sortedAndFilteredRules.length }} filtered rule{{ sortedAndFilteredRules.length > 1 ? 's are' : ' is' }} already <strong>active</strong>.
-                    </template>
-                </span>
-                <span v-else-if="bulkActionModal.action === 'deactivate'">
-                    <template v-if="getRulesCountForAction('deactivate') > 0">
-                        Are you sure you want to <strong>deactivate</strong> {{ getRulesCountForAction('deactivate') }} rule{{ getRulesCountForAction('deactivate') > 1 ? 's' : '' }}?
-                        <span v-if="getRulesCountForAction('deactivate') < sortedAndFilteredRules.length" class="text-sm text-gray-500">
-                            <br>({{ sortedAndFilteredRules.length - getRulesCountForAction('deactivate') }} rule{{ sortedAndFilteredRules.length - getRulesCountForAction('deactivate') > 1 ? 's are' : ' is' }} already inactive)
-                        </span>
-                    </template>
-                    <template v-else>
-                        All {{ sortedAndFilteredRules.length }} filtered rule{{ sortedAndFilteredRules.length > 1 ? 's are' : ' is' }} already <strong>inactive</strong>.
-                    </template>
-                </span>
-                <span v-else-if="bulkActionModal.action === 'delete'">
-                    Are you sure you want to <strong>delete</strong> all {{ sortedAndFilteredRules.length }} filtered rule{{ sortedAndFilteredRules.length > 1 ? 's' : '' }}? 
-                    <br><strong class="text-red-600">This action is irreversible.</strong>
-                </span>
-            </p>
-            
-            <div class="flex justify-end space-x-3">
-                <a
-                    @click="closeBulkActionModal"
-                    class="px-4 py-2 text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition duration-150 cursor-pointer"
+                    class="px-3 py-1 border rounded-lg transition-colors duration-150"
                 >
-                    Cancel
+                    {{ page }}
                 </a>
-                <a
-                    @click="(bulkActionModal.action === 'activate' && getRulesCountForAction('activate') === 0) || (bulkActionModal.action === 'deactivate' && getRulesCountForAction('deactivate') === 0) ? null : executeBulkAction"
-                    class="px-4 py-2 text-white rounded-lg transition duration-150"
-                    :class="{
-                        'bg-green-600 hover:bg-green-700 cursor-pointer': bulkActionModal.action === 'activate' && getRulesCountForAction('activate') > 0,
-                        'bg-yellow-600 hover:bg-yellow-700 cursor-pointer': bulkActionModal.action === 'deactivate' && getRulesCountForAction('deactivate') > 0,
-                        'bg-red-600 hover:bg-red-700 cursor-pointer': bulkActionModal.action === 'delete',
-                        'bg-gray-400 cursor-not-allowed': (bulkActionModal.action === 'activate' && getRulesCountForAction('activate') === 0) || (bulkActionModal.action === 'deactivate' && getRulesCountForAction('deactivate') === 0)
-                    }"
-                >
+            </template>
+            
+            <a 
+                @click="goToPage(currentPage + 1)" 
+                :disabled="currentPage === totalPages"
+                class="px-3 py-1 border rounded-lg text-gray-700 bg-white hover:bg-gray-100 disabled:opacity-50"
+            >
+                Next &raquo;
+            </a>
+        </div>
+
+        <p v-if="isLoading" class="mt-6 text-center text-gray-500">Loading rules...</p>
+        <p v-else-if="rules.length === 0" class="mt-6 text-center text-gray-500">No detection rule stored yet</p>
+
+        <div 
+            v-if="bulkActionModal.visible" 
+            class="flex fixed inset-0 bg-gray-200 bg-opacity-80 backdrop-opacity-80 items-center justify-center z-50"
+            @click="closeBulkActionModal"
+        >
+            <div 
+                class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl"
+                @click.stop
+            >
+                <div class="flex items-center mb-4">
+                    <span 
+                        class="w-6 h-6 mr-3"
+                        :class="{
+                            'icon-[material-symbols--warning] text-red-500': bulkActionModal.action === 'delete',
+                            'icon-[material-symbols--info] text-orange-400': bulkActionModal.action !== 'delete'
+                        }"
+                    ></span>
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        Confirm bulk action
+                    </h3>
+                </div>
+                
+                <p class="text-gray-600 mb-6">
                     <span v-if="bulkActionModal.action === 'activate'">
-                        <template v-if="getRulesCountForAction('activate') > 0">Activate {{ getRulesCountForAction('activate') }} rule{{ getRulesCountForAction('activate') > 1 ? 's' : '' }}</template>
-                        <template v-else>All Already Active</template>
+                        <template v-if="getRulesCountForAction('activate') > 0">
+                            Are you sure you want to <strong>activate</strong> {{ getRulesCountForAction('activate') }} rule{{ getRulesCountForAction('activate') > 1 ? 's' : '' }}?
+                            <span v-if="getRulesCountForAction('activate') < sortedAndFilteredRules.length" class="text-sm text-gray-500">
+                                <br>({{ sortedAndFilteredRules.length - getRulesCountForAction('activate') }} rule{{ sortedAndFilteredRules.length - getRulesCountForAction('activate') > 1 ? 's are' : ' is' }} already active)
+                            </span>
+                        </template>
+                        <template v-else>
+                            All {{ sortedAndFilteredRules.length }} filtered rule{{ sortedAndFilteredRules.length > 1 ? 's are' : ' is' }} already <strong>active</strong>.
+                        </template>
                     </span>
                     <span v-else-if="bulkActionModal.action === 'deactivate'">
-                        <template v-if="getRulesCountForAction('deactivate') > 0">Deactivate {{ getRulesCountForAction('deactivate') }} rule{{ getRulesCountForAction('deactivate') > 1 ? 's' : '' }}</template>
-                        <template v-else>All Already Inactive</template>
+                        <template v-if="getRulesCountForAction('deactivate') > 0">
+                            Are you sure you want to <strong>deactivate</strong> {{ getRulesCountForAction('deactivate') }} rule{{ getRulesCountForAction('deactivate') > 1 ? 's' : '' }}?
+                            <span v-if="getRulesCountForAction('deactivate') < sortedAndFilteredRules.length" class="text-sm text-gray-500">
+                                <br>({{ sortedAndFilteredRules.length - getRulesCountForAction('deactivate') }} rule{{ sortedAndFilteredRules.length - getRulesCountForAction('deactivate') > 1 ? 's are' : ' is' }} already inactive)
+                            </span>
+                        </template>
+                        <template v-else>
+                            All {{ sortedAndFilteredRules.length }} filtered rule{{ sortedAndFilteredRules.length > 1 ? 's are' : ' is' }} already <strong>inactive</strong>.
+                        </template>
                     </span>
-                    <span v-else-if="bulkActionModal.action === 'delete'">Delete All</span>
-                </a>
+                    <span v-else-if="bulkActionModal.action === 'delete'">
+                        Are you sure you want to <strong>delete</strong> all {{ sortedAndFilteredRules.length }} filtered rule{{ sortedAndFilteredRules.length > 1 ? 's' : '' }}? 
+                        <br><strong class="text-red-600">This action is irreversible.</strong>
+                    </span>
+                </p>
+                
+                <div class="flex justify-end space-x-3">
+                    <a
+                        @click="closeBulkActionModal"
+                        class="px-4 py-2 text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition duration-150 cursor-pointer"
+                    >
+                        Cancel
+                    </a>
+                    <a
+                        @click="(bulkActionModal.action === 'activate' && getRulesCountForAction('activate') === 0) || (bulkActionModal.action === 'deactivate' && getRulesCountForAction('deactivate') === 0) ? null : executeBulkAction"
+                        class="px-4 py-2 text-white rounded-lg transition duration-150"
+                        :class="{
+                            'bg-green-600 hover:bg-green-700 cursor-pointer': bulkActionModal.action === 'activate' && getRulesCountForAction('activate') > 0,
+                            'bg-yellow-600 hover:bg-yellow-700 cursor-pointer': bulkActionModal.action === 'deactivate' && getRulesCountForAction('deactivate') > 0,
+                            'bg-red-600 hover:bg-red-700 cursor-pointer': bulkActionModal.action === 'delete',
+                            'bg-gray-400 cursor-not-allowed': (bulkActionModal.action === 'activate' && getRulesCountForAction('activate') === 0) || (bulkActionModal.action === 'deactivate' && getRulesCountForAction('deactivate') === 0)
+                        }"
+                    >
+                        <span v-if="bulkActionModal.action === 'activate'">
+                            <template v-if="getRulesCountForAction('activate') > 0">Activate {{ getRulesCountForAction('activate') }} rule{{ getRulesCountForAction('activate') > 1 ? 's' : '' }}</template>
+                            <template v-else>All Already Active</template>
+                        </span>
+                        <span v-else-if="bulkActionModal.action === 'deactivate'">
+                            <template v-if="getRulesCountForAction('deactivate') > 0">Deactivate {{ getRulesCountForAction('deactivate') }} rule{{ getRulesCountForAction('deactivate') > 1 ? 's' : '' }}</template>
+                            <template v-else>All Already Inactive</template>
+                        </span>
+                        <span v-else-if="bulkActionModal.action === 'delete'">Delete All</span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
