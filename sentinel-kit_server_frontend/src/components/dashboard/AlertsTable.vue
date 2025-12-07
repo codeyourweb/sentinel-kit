@@ -9,10 +9,35 @@
             </div>
         </div>
         
-        <div v-if="alertsLoading" class="p-8 text-center">
-            <div class="flex justify-center items-center space-x-2 text-orange-600">
-                <span class="icon-[svg-spinners--ring-resize] w-6 h-6 animate-spin"></span>
-                <span>Loading alerts...</span>
+        <div v-if="alertsLoading" class="animate-pulse">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alert</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Severity</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <tr v-for="i in 8" :key="i" class="hover:bg-gray-50">
+                            <td class="px-6 py-4 text-left">
+                                <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                                <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="h-5 bg-gray-200 rounded-full w-16"></div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="h-4 bg-gray-200 rounded w-20"></div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="h-6 bg-gray-200 rounded w-16"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
         

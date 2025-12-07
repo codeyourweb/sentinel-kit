@@ -361,7 +361,6 @@ const refreshData = async () => {
 }
 
 const loadEvents = async () => {
-    console.log('=== loadEvents() called with filter:', alertFilter.value)
     eventsLoading.value = true
     try {
         const startTime = new Date(startDate.value).toISOString()
@@ -408,8 +407,6 @@ const loadEvents = async () => {
                     boost: 1.0
                 }
             })
-            
-            console.log('Executing Elasticsearch search for events with Kibana-style query:', alertFilter.value.trim())
         }
 
         const response = await fetch(`${BASE_URL}/elasticsearch/search`, {
@@ -698,7 +695,6 @@ const handlePageChange = (page) => {
 }
 
 const filterAlerts = () => {
-    console.log('=== filterAlerts() called, showAlertsOnly:', showAlertsOnly.value, 'filter:', alertFilter.value)
     currentPage.value = 1
     updateURL()
     
@@ -713,7 +709,6 @@ const filterAlerts = () => {
         }
         
         searchTimeout.value = setTimeout(() => {
-            console.log('=== Executing debounced loadEvents()')
             loadEvents()
             loadChartData()
         }, 500) // 500ms delay

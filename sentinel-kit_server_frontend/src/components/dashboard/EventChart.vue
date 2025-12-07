@@ -166,10 +166,26 @@
             </div>
         </div>
         <div v-if="!collapsed" class="px-4 pb-4">
-            <div v-if="loading" class="flex justify-center items-center h-64">
-                <div class="flex items-center space-x-2 text-orange-600">
-                    <span class="icon-[svg-spinners--ring-resize] w-8 h-8 animate-spin"></span>
-                    <span>Loading chart data...</span>
+            <div v-if="loading" class="animate-pulse h-64 bg-gray-100 rounded-lg flex flex-col justify-center items-center space-y-4">
+                <!-- Chart skeleton -->
+                <div class="w-full h-48 bg-gray-200 rounded flex items-end justify-around px-4">
+                    <!-- Bars skeleton -->
+                    <div class="w-6 bg-gray-300 rounded-t" style="height: 60%"></div>
+                    <div class="w-6 bg-gray-300 rounded-t" style="height: 80%"></div>
+                    <div class="w-6 bg-gray-300 rounded-t" style="height: 40%"></div>
+                    <div class="w-6 bg-gray-300 rounded-t" style="height: 90%"></div>
+                    <div class="w-6 bg-gray-300 rounded-t" style="height: 70%"></div>
+                    <div class="w-6 bg-gray-300 rounded-t" style="height: 50%"></div>
+                    <div class="w-6 bg-gray-300 rounded-t" style="height: 85%"></div>
+                    <div class="w-6 bg-gray-300 rounded-t" style="height: 65%"></div>
+                </div>
+                <!-- X-axis skeleton -->
+                <div class="w-full flex justify-around px-4">
+                    <div class="h-3 bg-gray-300 rounded w-12"></div>
+                    <div class="h-3 bg-gray-300 rounded w-12"></div>
+                    <div class="h-3 bg-gray-300 rounded w-12"></div>
+                    <div class="h-3 bg-gray-300 rounded w-12"></div>
+                    <div class="h-3 bg-gray-300 rounded w-12"></div>
                 </div>
             </div>
             <div v-else class="h-64 relative">

@@ -62,8 +62,22 @@
         
         <!-- Scrollable Content Area -->
         <div v-if="!collapsed" class="flex-1 scrollable-content p-4" style="max-height: calc(100vh - 200px);">
-            <div v-if="loading" class="flex items-center justify-center h-32">
-                <span class="icon-[svg-spinners--ring-resize] w-6 h-6 text-orange-600 animate-spin"></span>
+            <div v-if="loading" class="animate-pulse space-y-3">
+                <div v-for="i in 8" :key="i" class="border border-gray-200 rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="h-4 bg-gray-200 rounded w-24"></div>
+                        <div class="h-3 bg-gray-200 rounded w-8"></div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="w-full bg-gray-200 rounded-full h-2"></div>
+                    </div>
+                    <div class="space-y-1">
+                        <div v-for="j in 3" :key="j" class="flex items-center justify-between py-1">
+                            <div class="h-3 bg-gray-200 rounded flex-1 mr-2"></div>
+                            <div class="h-3 bg-gray-200 rounded w-8"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <div v-else class="space-y-3">

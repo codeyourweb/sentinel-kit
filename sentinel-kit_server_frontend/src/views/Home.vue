@@ -7,8 +7,8 @@
         </div>
         <div class="flex items-center space-x-6">
             <div class="flex items-center space-x-2">
-                <span class="icon-[material-symbols--update] w-4 h-4"></span>
-                <span>Last updated: {{ lastUpdated }}</span>
+                <span class="icon-[material-symbols--update] w-4 h-4" :class="{ 'animate-spin': loading }"></span>
+                <span>Last updated: {{ loading ? 'Updating...' : lastUpdated }}</span>
             </div>
             <div class="flex items-center space-x-2">
                 <span class="icon-[material-symbols--schedule] w-4 h-4"></span>
@@ -28,7 +28,17 @@
                         <div class="p-6 space-y-4">
                             <!-- Total Events -->
                             <div class="bg-gradient-to-r from-blue-100 to-blue-200 border border-blue-300 p-6 rounded-lg shadow-sm">
-                                <div class="flex items-center justify-between">
+                                <div v-if="loading" class="animate-pulse">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex-1">
+                                            <div class="h-4 bg-blue-300 rounded w-32 mb-3"></div>
+                                            <div class="h-8 bg-blue-300 rounded w-24 mb-2"></div>
+                                            <div class="h-3 bg-blue-300 rounded w-20"></div>
+                                        </div>
+                                        <div class="w-10 h-10 bg-blue-300 rounded"></div>
+                                    </div>
+                                </div>
+                                <div v-else class="flex items-center justify-between">
                                     <div>
                                         <p class="text-blue-700 text-sm font-medium">Total Events (24h)</p>
                                         <p class="text-3xl font-bold text-gray-800">{{ formatNumber(totalEvents) }}</p>
@@ -45,7 +55,17 @@
 
                             <!-- Active Alerts -->
                             <div class="bg-gradient-to-r from-rose-100 to-pink-200 border border-rose-300 p-6 rounded-lg shadow-sm">
-                                <div class="flex items-center justify-between">
+                                <div v-if="loading" class="animate-pulse">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex-1">
+                                            <div class="h-4 bg-rose-300 rounded w-28 mb-3"></div>
+                                            <div class="h-8 bg-rose-300 rounded w-16 mb-2"></div>
+                                            <div class="h-3 bg-rose-300 rounded w-24"></div>
+                                        </div>
+                                        <div class="w-10 h-10 bg-rose-300 rounded"></div>
+                                    </div>
+                                </div>
+                                <div v-else class="flex items-center justify-between">
                                     <div>
                                         <p class="text-rose-700 text-sm font-medium">Active Alerts</p>
                                         <p class="text-3xl font-bold text-gray-800">{{ activeAlerts }}</p>
@@ -59,7 +79,17 @@
 
                             <!-- Detection Rules -->
                             <div class="bg-gradient-to-r from-purple-100 to-violet-200 border border-purple-300 p-6 rounded-lg shadow-sm">
-                                <div class="flex items-center justify-between">
+                                <div v-if="loading" class="animate-pulse">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex-1">
+                                            <div class="h-4 bg-purple-300 rounded w-32 mb-3"></div>
+                                            <div class="h-8 bg-purple-300 rounded w-20 mb-2"></div>
+                                            <div class="h-3 bg-purple-300 rounded w-24"></div>
+                                        </div>
+                                        <div class="w-10 h-10 bg-purple-300 rounded"></div>
+                                    </div>
+                                </div>
+                                <div v-else class="flex items-center justify-between">
                                     <div>
                                         <p class="text-purple-700 text-sm font-medium">Detection Rules</p>
                                         <p class="text-3xl font-bold text-gray-800">{{ activeRules }}</p>
@@ -82,7 +112,13 @@
                         </div>
                     </div>
                     <div class="p-6 flex-1">
-                        <div class="services-single-column h-full">
+                        <div v-if="loading" class="animate-pulse space-y-4">
+                            <div class="h-16 bg-gray-200 rounded-lg"></div>
+                            <div class="h-16 bg-gray-200 rounded-lg"></div>
+                            <div class="h-16 bg-gray-200 rounded-lg"></div>
+                            <div class="h-16 bg-gray-200 rounded-lg"></div>
+                        </div>
+                        <div v-else class="services-single-column h-full">
                             <ServiceStatus @services-loaded="handleServicesLoaded" />
                         </div>
                     </div>
@@ -92,34 +128,105 @@
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
                 <div class="px-6 py-4 border-b border-gray-200">
                     <div class="flex items-center justify-between">
-                        <h2 class="text-xl font-semibold text-gray-900">Recent Activity</h2>
-                        <router-link to="/alerts" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                            View All Events →
+                        <h2 class="text-xl font-semibold text-gray-900">Last alerts</h2>
+                        <router-link :to="{ path: '/alerts', query: getLast24HoursParams() }" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                            View All Alerts →
                         </router-link>
                     </div>
                 </div>
                 <div class="p-6">
-                    <div v-if="recentAlerts.length === 0" class="text-center py-8 text-gray-500">
+                    <div v-if="loading" class="animate-pulse">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Alert
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Severity
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Time
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr v-for="i in 3" :key="i">
+                                        <td class="px-6 py-4">
+                                            <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                                            <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="h-6 bg-gray-200 rounded-full w-16"></div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="h-4 bg-gray-200 rounded w-20"></div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="h-6 bg-gray-200 rounded w-12"></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div v-else-if="recentAlerts.length === 0" class="text-center py-8 text-gray-500">
                         <span class="icon-[material-symbols--check-circle] w-12 h-12 mx-auto mb-3 text-green-500"></span>
                         <p class="text-lg font-medium text-gray-900 mb-2">All Clear</p>
                         <p>No recent security alerts detected in the last 24 hours</p>
                     </div>
-                    <div v-else class="space-y-3">
-                        <div v-for="alert in recentAlerts" :key="alert.id" class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                            <div class="flex items-center space-x-4">
-                                <div :class="getSeverityIndicator(alert.severity)" class="w-3 h-3 rounded-full flex-shrink-0"></div>
-                                <div>
-                                    <p class="font-medium text-gray-900">{{ alert.title }}</p>
-                                    <p class="text-sm text-gray-600">{{ alert.description }}</p>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-sm text-gray-500">{{ formatTime(alert.timestamp) }}</p>
-                                <span :class="getSeverityBadge(alert.severity)" class="inline-flex px-2 py-1 text-xs font-medium rounded-full">
-                                    {{ alert.severity }}
-                                </span>
-                            </div>
-                        </div>
+                    <div v-else class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Alert
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Severity
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Time
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr v-for="alert in recentAlerts" :key="alert.id" class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 text-left">
+                                        <div class="text-sm font-medium text-gray-900 text-left">
+                                            <a 
+                                                @click="navigateToAlert(alert.rule_id)"
+                                                class="text-orange-400 hover:text-orange-300 cursor-pointer underline"
+                                                href="#"
+                                            >
+                                                {{ alert.title }}
+                                            </a>
+                                        </div>
+                                        <div class="text-sm text-gray-500 text-left">{{ alert.description }}</div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full" :class="getSeverityClass(alert.severity)">
+                                            {{ alert.severity }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-900 text-left">
+                                        {{ formatDate(alert.timestamp) }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm">
+                                        <a 
+                                            @click="navigateToAlert(alert.rule_id)"
+                                            class="btn btn-primary text-xs px-3 py-1 rounded flex items-center gap-1"
+                                        >
+                                            <span class="icon-[material-symbols--undereye] bg-white text-white"></span>
+                                            Show
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -132,10 +239,14 @@
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import ServiceStatus from '../components/ServiceStatus.vue'
+import { useAlertUtils } from '../composables/useAlertUtils'
 
 const emit = defineEmits(['show-notification'])
 const router = useRouter()
 const BASE_URL = import.meta.env.VITE_API_BASE_URL
+
+// Import utility functions from AlertsList
+const { getSeverityClass, formatDate } = useAlertUtils()
 
 // Reactive state for dashboard metrics
 const dashboardData = reactive({
@@ -170,56 +281,30 @@ const formatNumber = (num) => {
     return num.toString()
 }
 
-const formatTime = (timestamp) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffMs = now - date
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    return `${diffDays}d ago`
-}
-
-const getSeverityIndicator = (severity) => {
-    const classes = {
-        critical: 'bg-red-500',
-        high: 'bg-orange-500',
-        medium: 'bg-yellow-500',
-        low: 'bg-blue-500',
-        info: 'bg-gray-500'
-    }
-    return classes[severity] || 'bg-gray-500'
-}
-
-const getSeverityBadge = (severity) => {
-    const classes = {
-        critical: 'bg-red-100 text-red-800',
-        high: 'bg-orange-100 text-orange-800',
-        medium: 'bg-yellow-100 text-yellow-800',
-        low: 'bg-blue-100 text-blue-800',
-        info: 'bg-gray-100 text-gray-800'
-    }
-    return classes[severity] || 'bg-gray-100 text-gray-800'
-}
-
 // Data loading methods
 const loadDashboardMetrics = async () => {
     loading.value = true
     try {
-        // Load events metrics (last 24h)
-        await loadEventsMetrics()
+        // Load all dashboard stats from new endpoint
+        const response = await fetch(`${BASE_URL}/dashboard/stats`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            }
+        })
+
+        if (response.ok) {
+            const data = await response.json()
+            
+            // Update dashboard data with real values
+            dashboardData.totalEvents = data.total_events_24h
+            dashboardData.eventsTrend = data.events_trend
+            dashboardData.activeAlerts = data.active_alerts.total
+            dashboardData.criticalAlerts = data.active_alerts.critical
+            dashboardData.activeRules = data.detection_rules.active
+            dashboardData.totalRules = data.detection_rules.total
+        }
         
-        // Load active alerts
-        await loadAlertsMetrics()
-        
-        // Load detection rules
-        await loadRulesMetrics()
-        
-        // Load recent alerts
+        // Load recent alerts separately
         await loadRecentAlerts()
         
         lastUpdated.value = new Date().toLocaleTimeString()
@@ -234,147 +319,58 @@ const loadDashboardMetrics = async () => {
     }
 }
 
-const loadEventsMetrics = async () => {
-    try {
-        const endTime = new Date().toISOString()
-        const startTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-        const yesterdayStart = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-        const yesterdayEnd = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-
-        // Query for today's events
-        const todayQuery = {
-            index: 'sentinelkit-*',
-            size: 0,
-            query: {
-                range: {
-                    '@timestamp': { gte: startTime, lte: endTime }
-                }
-            },
-            aggs: {
-                total_count: {
-                    value_count: { field: '@timestamp' }
-                }
-            }
-        }
-
-        // Query for yesterday's events
-        const yesterdayQuery = {
-            ...todayQuery,
-            query: {
-                range: {
-                    '@timestamp': { gte: yesterdayStart, lte: yesterdayEnd }
-                }
-            }
-        }
-
-        const [todayResponse, yesterdayResponse] = await Promise.all([
-            fetch(`${BASE_URL}/elasticsearch/search`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(todayQuery)
-            }),
-            fetch(`${BASE_URL}/elasticsearch/search`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(yesterdayQuery)
-            })
-        ])
-
-        if (todayResponse.ok && yesterdayResponse.ok) {
-            const todayData = await todayResponse.json()
-            const yesterdayData = await yesterdayResponse.json()
-            
-            const todayCount = todayData.data?.aggregations?.total_count?.value || 0
-            const yesterdayCount = yesterdayData.data?.aggregations?.total_count?.value || 0
-            
-            dashboardData.totalEvents = todayCount
-            dashboardData.eventsTrend = yesterdayCount > 0 
-                ? Math.round(((todayCount - yesterdayCount) / yesterdayCount) * 100) 
-                : 0
-        }
-    } catch (error) {
-        console.error('Error loading events metrics:', error)
-    }
-}
-
-const loadAlertsMetrics = async () => {
-    try {
-        const endTime = new Date().toISOString()
-        const startTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-
-        const response = await fetch(`${BASE_URL}/alerts?startDate=${startTime}&endDate=${endTime}&limit=1000`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-            }
-        })
-
-        if (response.ok) {
-            const result = await response.json()
-            const alerts = Array.isArray(result) ? result : (result.alerts || [])
-            
-            dashboardData.activeAlerts = alerts.length
-            dashboardData.criticalAlerts = alerts.filter(alert => 
-                alert.rule_version?.level === 'critical' || alert.sigmaRule?.level === 'critical'
-            ).length
-        }
-    } catch (error) {
-        console.error('Error loading alerts metrics:', error)
-    }
-}
-
-const loadRulesMetrics = async () => {
-    try {
-        const response = await fetch(`${BASE_URL}/rules`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-            }
-        })
-
-        if (response.ok) {
-            const rules = await response.json()
-            dashboardData.totalRules = rules.length
-            dashboardData.activeRules = rules.filter(rule => rule.enabled).length
-        }
-    } catch (error) {
-        console.error('Error loading rules metrics:', error)
-        dashboardData.activeRules = 112
-        dashboardData.totalRules = 150
-    }
-}
-
 const loadRecentAlerts = async () => {
     try {
-        const endTime = new Date().toISOString()
-        const startTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-
-        const response = await fetch(`${BASE_URL}/alerts?startDate=${startTime}&endDate=${endTime}&limit=5`, {
+        const response = await fetch(`${BASE_URL}/dashboard/recent-alerts?limit=5`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             }
         })
 
         if (response.ok) {
-            const result = await response.json()
-            const alerts = Array.isArray(result) ? result : (result.alerts || [])
-            
-            dashboardData.recentAlerts = alerts.slice(0, 5).map(alert => ({
-                id: alert.id,
-                title: alert.sigmaRule?.title || alert.rule?.name || 'Security Alert',
-                description: alert.sigmaRule?.description || 'Security event detected',
-                severity: alert.rule_version?.level || alert.sigmaRule?.level || 'medium',
-                timestamp: alert.created_at || alert.event_timestamp
-            }))
+            const alerts = await response.json()
+            dashboardData.recentAlerts = alerts
         }
     } catch (error) {
         console.error('Error loading recent alerts:', error)
         dashboardData.recentAlerts = []
     }
+}
+
+// Helper function to get 24h date range
+const getLast24HoursParams = () => {
+    const endTime = new Date()
+    const startTime = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    
+    // Format dates as YYYY-MM-DDTHH:mm (same format as in the URL example)
+    const formatDate = (date) => {
+        return date.getFullYear() + '-' + 
+               String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+               String(date.getDate()).padStart(2, '0') + 'T' + 
+               String(date.getHours()).padStart(2, '0') + ':' + 
+               String(date.getMinutes()).padStart(2, '0')
+    }
+    
+    return {
+        startDate: formatDate(startTime),
+        endDate: formatDate(endTime),
+        showAlertsOnly: true,
+        chartCollapsed: false
+    }
+}
+
+// Navigation method for alerts
+const navigateToAlert = (ruleId) => {
+    const params = getLast24HoursParams()
+    // Add rule filter if provided
+    if (ruleId) {
+        params.ruleFilter = ruleId
+    }
+    
+    router.push({
+        path: '/alerts',
+        query: params
+    })
 }
 
 const handleServicesLoaded = (servicesData) => {
@@ -407,16 +403,14 @@ onUnmounted(() => {
     }
 })
 
-// Properties exposed to template
-const {
-    totalEvents,
-    activeAlerts, 
-    criticalAlerts,
-    registeredAssets,
-    activeRules,
-    eventsTrend,
-    recentAlerts
-} = dashboardData
+// Properties exposed to template  
+const totalEvents = computed(() => dashboardData.totalEvents)
+const activeAlerts = computed(() => dashboardData.activeAlerts)
+const criticalAlerts = computed(() => dashboardData.criticalAlerts) 
+const registeredAssets = computed(() => dashboardData.registeredAssets)
+const activeRules = computed(() => dashboardData.activeRules)
+const eventsTrend = computed(() => dashboardData.eventsTrend)
+const recentAlerts = computed(() => dashboardData.recentAlerts)
 </script>
 
 <style scoped>

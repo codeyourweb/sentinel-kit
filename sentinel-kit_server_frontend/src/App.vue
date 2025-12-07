@@ -195,6 +195,7 @@ const checkAuth = async () => {
 // Side menu items
 const menuItems = [
 { name: 'Home', icon: 'icon-[svg-spinners--blocks-wave]', route: 'Home' },
+{ name: 'Datasources', icon: 'icon-[mdi--server]', route: 'Datasources' },
 { name: 'Rulesets', icon: 'icon-[carbon--rule-draft]', route: 'RulesList' },
 { name: 'Alerts', icon: 'icon-[solar--eye-scan-broken]', route: 'AlertsList' },
 { name: 'Logs', icon: 'icon-[icon-park-outline--log]', route: 'Kibana' },

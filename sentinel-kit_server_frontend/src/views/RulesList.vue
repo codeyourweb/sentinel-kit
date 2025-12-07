@@ -93,7 +93,40 @@
             </div>
         </div>
 
-        <ul class="mt-6 space-y-3">
+        <!-- Rules List or Loading Skeleton -->
+        <div v-if="isLoading" class="mt-6 space-y-3">
+            <!-- Skeleton for RuleSummary components -->
+            <div v-for="i in 5" :key="i" class="animate-pulse border-l-4 border-gray-300 p-4 mb-4 rounded-lg shadow-sm bg-gray-100">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center space-x-3 min-w-0 flex-1">
+                        <!-- Edit button skeleton -->
+                        <div class="w-9 h-9 bg-gray-300 rounded-full"></div>
+                        <!-- Title skeleton -->
+                        <div class="h-6 bg-gray-300 rounded w-1/3"></div>
+                    </div>
+                    <!-- Toggle switch skeleton -->
+                    <div class="w-11 h-6 bg-gray-300 rounded-full"></div>
+                </div>
+                <!-- Description skeleton -->
+                <div class="h-4 bg-gray-300 rounded w-3/4 mb-4"></div>
+                <!-- Footer skeleton -->
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-4">
+                        <!-- Severity badge skeleton -->
+                        <div class="h-5 bg-gray-300 rounded-full w-16"></div>
+                        <!-- Detection stats skeleton -->
+                        <div class="h-4 bg-gray-300 rounded w-20"></div>
+                        <div class="h-4 bg-gray-300 rounded w-20"></div>
+                        <div class="h-4 bg-gray-300 rounded w-20"></div>
+                        <div class="h-4 bg-gray-300 rounded w-20"></div>
+                    </div>
+                    <!-- Delete button skeleton -->
+                    <div class="w-8 h-8 bg-gray-300 rounded-lg"></div>
+                </div>
+            </div>
+        </div>
+
+        <ul v-else class="mt-6 space-y-3">
             <li v-for="rule in paginatedRules" :key="rule.id">
                 <RuleSummary 
                     :rule="rule" 
@@ -138,8 +171,7 @@
             </a>
         </div>
 
-        <p v-if="isLoading" class="mt-6 text-center text-gray-500">Loading rules...</p>
-        <p v-else-if="rules.length === 0" class="mt-6 text-center text-gray-500">No detection rule stored yet</p>
+        <p v-if="!isLoading && rules.length === 0" class="mt-6 text-center text-gray-500">No detection rule stored yet</p>
 
         <div 
             v-if="bulkActionModal.visible" 

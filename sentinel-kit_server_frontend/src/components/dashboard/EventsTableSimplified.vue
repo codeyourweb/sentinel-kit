@@ -1,9 +1,34 @@
 <template>
     <div class="bg-white overflow-hidden h-full">
-        <div v-if="eventsLoading" class="flex justify-center items-center h-64">
-            <div class="flex items-center space-x-2 text-orange-600">
-                <span class="icon-[svg-spinners--ring-resize] w-8 h-8 animate-spin"></span>
-                <span>Loading events...</span>
+        <div v-if="eventsLoading" class="animate-pulse divide-y divide-gray-100 overflow-y-auto max-h-screen">
+            <div v-for="i in 10" :key="i" class="p-4">
+                <div class="flex items-start gap-4 min-w-0 overflow-hidden">
+                    <!-- Timestamp skeleton -->
+                    <div class="flex-shrink-0">
+                        <div class="h-5 bg-gray-200 rounded w-20"></div>
+                    </div>
+                    
+                    <!-- Content skeleton -->
+                    <div class="flex-1 min-w-0">
+                        <div class="space-y-2 min-w-0">
+                            <!-- Main content skeleton -->
+                            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                            
+                            <!-- Fields skeleton -->
+                            <div class="space-y-1">
+                                <div v-for="j in 3" :key="j" class="flex min-w-0 gap-2">
+                                    <div class="h-3 bg-gray-200 rounded w-16 flex-shrink-0"></div>
+                                    <div class="h-3 bg-gray-200 rounded flex-1"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Expand button skeleton -->
+                    <div class="flex-shrink-0">
+                        <div class="w-6 h-6 bg-gray-200 rounded"></div>
+                    </div>
+                </div>
             </div>
         </div>
         
