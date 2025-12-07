@@ -1,4 +1,28 @@
+<!--
+/**
+ * Assets View - Asset Management and Endpoint Security (Coming Soon)
+ * 
+ * This view will provide comprehensive asset management capabilities for
+ * endpoint security and forensic analysis in the Sentinel-Kit platform.
+ * Currently displays a "coming soon" page with planned features preview.
+ * 
+ * Planned Features:
+ * - Endpoint inventory and asset discovery
+ * - Agent deployment and management
+ * - Forensic analysis capabilities
+ * - Compliance monitoring and reporting
+ * - Vulnerability assessment integration
+ * - Asset lifecycle management
+ * 
+ * Current Status:
+ * - Placeholder view with feature preview
+ * - GitHub repository promotion
+ * - UI/UX design showcase for future implementation
+ */
+-->
+
 <template>
+  <!-- Asset Management Coming Soon Page -->
   <div class="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-700">
     <!-- Fork me on GitHub -->
     <a 

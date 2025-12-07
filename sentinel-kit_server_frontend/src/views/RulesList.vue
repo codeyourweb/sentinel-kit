@@ -1,4 +1,39 @@
+<!--
+/**
+ * Rules List View - Detection Rules Management Interface
+ * 
+ * This view provides a comprehensive interface for managing Sigma detection rules
+ * in the Sentinel-Kit platform. It offers advanced filtering, sorting, and bulk
+ * operations for efficient rule management.
+ * 
+ * Features:
+ * - Advanced search with title and description filtering
+ * - Multiple sorting options (title, date, status, severity, detection count)
+ * - Bulk operations for enabling/disabling multiple rules
+ * - Rule status indicators with active/inactive states
+ * - Detection statistics with 24h, 7d, and 30d metrics
+ * - Pagination with configurable page sizes
+ * - Real-time rule status updates
+ * - Quick access to rule editing and creation
+ * 
+ * Rule Management:
+ * - Create new Sigma rules with guided wizard
+ * - Edit existing rules with version history
+ * - Enable/disable rules individually or in bulk
+ * - View detection statistics and performance metrics
+ * - Filter by active status and severity levels
+ * 
+ * Data Display:
+ * - Rule title, description, and metadata
+ * - Active/inactive status with toggle controls
+ * - Severity levels with color-coded indicators
+ * - Detection count statistics for performance analysis
+ * - Creation dates and last modification times
+ */
+-->
+
 <template>
+    <!-- Rules Management Container -->
     <div class="container mx-auto px-6">
         <a class="btn btn-primary float-right mb-4 mt-4 rounded" @click="$router.push({ name: 'RuleCreate' })">
             <span class="icon-[material-symbols--save-rounded] bg-white text-white"></span>

@@ -1,4 +1,30 @@
+<!--
+/**
+ * Home View - Platform Dashboard Summary
+ * 
+ * This is the main dashboard view that provides a comprehensive overview
+ * of the Sentinel-Kit security platform. It displays key metrics, recent
+ * alerts, service status, and real-time statistics.
+ * 
+ * Features:
+ * - Real-time security metrics with trend indicators
+ * - Active alerts summary with severity breakdown
+ * - Detection rules status and configuration overview
+ * - Recent alerts list with quick access to details
+ * - Service status indicators for all platform components
+ * - Auto-refresh functionality every 30 seconds
+ * - Responsive design for desktop and mobile devices
+ * 
+ * Data Sources:
+ * - Platform metrics from backend APIs
+ * - Real-time alert data from Elasticsearch
+ * - Service health checks from monitoring endpoints
+ * - Detection rules status from rules engine
+ */
+-->
+
 <template>
+    <!-- Dashboard Header with Auto-refresh Status -->
     <div class="flex items-center justify-center space-x-6 text-sm text-gray-500 px-6 py-4 mb-2">
         <div class="flex-1">
             <h1 class="text-2xl text-left font-semibold text-gray-900">

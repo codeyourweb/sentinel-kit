@@ -1,4 +1,37 @@
+<!--
+/**
+ * Alerts List View - Security Event and Alert Management Interface
+ * 
+ * This is a comprehensive view for managing and analyzing security alerts and events
+ * from the Sentinel-Kit platform. It provides advanced filtering, searching, and
+ * visualization capabilities for security analysts.
+ * 
+ * Features:
+ * - Dual-mode display: Events view and Alerts-only view
+ * - Real-time data refresh with configurable intervals
+ * - Advanced search with regex and boolean operators
+ * - Field-based filtering with dynamic facets
+ * - Time range selection and custom date filtering
+ * - Alert severity and status management
+ * - Rule visualization with Monaco editor integration
+ * - Resizable panels for optimal workflow
+ * - Export functionality for analysis
+ * 
+ * Layout Components:
+ * - Events Fields Panel: Dynamic field filtering and facets
+ * - Main Data Table: Alerts/events with sorting and pagination
+ * - Rule Viewer Panel: Monaco editor showing triggered rule content
+ * - Filter Bar: Search, time range, and quick filters
+ * 
+ * Data Sources:
+ * - Elasticsearch for event data
+ * - Backend API for alert metadata and rules
+ * - Real-time updates via WebSocket or polling
+ */
+-->
+
 <template>
+    <!-- Main Alerts Dashboard Container -->
     <div class="alerts-dashboard bg-gray-50 h-screen overflow-hidden">
         <div class="flex h-full">
             <div 
@@ -337,7 +370,7 @@ const totalPages = computed(() => {
 })
 
 const hasMorePages = computed(() => {
-    // Afficher la pagination s'il y a des données (même sur une seule page) ou s'il y a plusieurs pages
+    // Display pagination if there is data (even on a single page) or if there are multiple pages
     return totalItems.value > 0
 })
 

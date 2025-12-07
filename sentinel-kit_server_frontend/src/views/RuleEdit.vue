@@ -1,4 +1,34 @@
+<!--
+/**
+ * Rule Edit View - Sigma Rule Editor with Version History
+ * 
+ * This view provides a comprehensive interface for editing Sigma detection rules
+ * with full version history management and real-time code editing capabilities.
+ * 
+ * Features:
+ * - Monaco Editor integration for YAML syntax highlighting
+ * - Rule version history with diff visualization
+ * - Real-time rule validation and syntax checking
+ * - Active/inactive rule state management
+ * - Automatic change detection with unsaved changes warnings
+ * - Version comparison and diff viewing
+ * - Responsive layout with resizable panels
+ * 
+ * Layout:
+ * - Left Panel: Rule version history and navigation
+ * - Center Panel: Monaco code editor with YAML content
+ * - Top Bar: Rule metadata and action buttons
+ * 
+ * Data Flow:
+ * - Fetches rule data and versions from backend API
+ * - Loads rule content into Monaco editor
+ * - Tracks changes and enables save functionality
+ * - Supports version switching and diff viewing
+ */
+-->
+
 <template>
+  <!-- Main Rule Editor Layout -->
   <div class="flex h-screen-minus-header">
     
     <div class="rule-versioning w-1/4 p-4 border-r border-gray-200 overflow-y-auto">
@@ -372,7 +402,7 @@ const fetchRuleData = () => {
   })
       .then(response => {
         if (!response.ok) {
-          throw new Error(`Erreur HTTP! Status: ${response.status}`);
+          throw new Error(`HTTP Error! Status: ${response.status}`);
         }
         return response.json();
       })
@@ -384,7 +414,7 @@ const fetchRuleData = () => {
               loadVersionContent(latestVersion);
           } else {
               details.value = { versions: [] };
-              code.value = "Aucune version de règle trouvée.";
+              code.value = "No rule version found.";
           }
       })
       .catch(error => {

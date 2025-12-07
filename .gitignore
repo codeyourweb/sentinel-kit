@@ -12,10 +12,8 @@
 /data/rulesets/yara_ruleset/*
 /data/rulesets/sigma_ruleset/*
 /data/fluentbit_db/*
-/data/log_ingest_data/evtx/*
-/data/log_ingest_data/auditd/*
-/data/log_ingest_data/json/*
-/data/log_ingest_data/csv/*
+/data/log_ingest_data/*/*
+!/data/log_ingest_data/*/.gitkeep
 /data/mysql_data/*
 /data/yara_triage_data/*
 /docs/graphs/*.bkp

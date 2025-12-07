@@ -1,12 +1,52 @@
+<!--
+/**
+ * Service Status Component - Platform Services Health Monitor
+ * 
+ * This component displays the real-time health status of all platform
+ * services in the Sentinel-Kit infrastructure. It provides visual indicators
+ * and detailed information about service availability and performance.
+ * 
+ * Features:
+ * - Real-time service health monitoring
+ * - Color-coded status indicators (green/yellow/red)
+ * - Responsive grid layout for multiple services
+ * - Service descriptions and metadata display
+ * - Automatic refresh and health check polling
+ * - Visual feedback with hover effects and animations
+ * 
+ * Service Categories:
+ * - Core Platform Services (Backend, Frontend, Database)
+ * - Monitoring Stack (Grafana, Prometheus, Elasticsearch)
+ * - Security Tools (FluentBit, Kibana, Alert Manager)
+ * - Infrastructure Components (Caddy, Docker, Network)
+ * 
+ * Status Levels:
+ * - Healthy: Service running normally (green)
+ * - Warning: Service degraded or issues detected (yellow)
+ * - Critical: Service down or unreachable (red)
+ * - Unknown: Health check failed or timeout (gray)
+ * 
+ * Data Sources:
+ * - Health check endpoints for each service
+ * - Docker container status monitoring
+ * - Network connectivity tests
+ * - Performance metrics and response times
+ */
+-->
+
 <template>
+  <!-- Services Health Dashboard Grid -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Individual Service Status Card -->
     <div
       v-for="service in services"
       :key="service.service"
       class="bg-white rounded-lg shadow-md border-l-4 p-4 transition-all duration-200 hover:shadow-lg"
       :class="getServiceBorderClass(service.status)"
     >
+      <!-- Service Information Header -->
       <div class="flex items-center justify-between">
+        <!-- Service Details -->
         <div class="flex-1">
           <h3 class="text-lg font-semibold text-gray-900 text-justify">
             {{ service.name }}
@@ -16,6 +56,7 @@
           </p>
         </div>
         
+        <!-- Status Indicator -->
         <div class="flex items-center space-x-2">
           <span 
             class="w-3 h-3 rounded-full"

@@ -1,4 +1,42 @@
+<!--
+/**
+ * Datasources View - Data Ingestion Monitoring and Management
+ * 
+ * This view provides comprehensive monitoring and management capabilities for
+ * data sources in the Sentinel-Kit platform. It tracks ingestion rates, health
+ * status, and provides detailed analytics for each configured data source.
+ * 
+ * Features:
+ * - Real-time data source monitoring and health status
+ * - Ingestion rate charts and trend analysis
+ * - Time-based filtering (24h, 7d, 30d views)
+ * - Data source configuration and management
+ * - Event details viewing with expandable panels
+ * - Performance metrics and statistics
+ * - Alert indicators for data source issues
+ * 
+ * Monitoring Capabilities:
+ * - Total events ingested per data source
+ * - Ingestion rate trends over time
+ * - Data source health and connectivity status
+ * - Error rates and failed ingestion attempts
+ * - Volume statistics and capacity planning
+ * 
+ * Layout:
+ * - Main Panel: Data source list with statistics and charts
+ * - Details Panel: Expandable event details and configuration
+ * - Header: Time range selector and refresh controls
+ * 
+ * Data Sources:
+ * - FluentBit ingestion logs and metrics
+ * - Data source configuration from backend API
+ * - Real-time event streaming data
+ * - Health check endpoints and monitoring data
+ */
+-->
+
 <template>
+    <!-- Datasources Monitoring Dashboard -->
     <div class="datasources-dashboard bg-gray-50 min-h-screen overflow-auto">
         <div class="flex min-h-screen">
             <!-- Main Panel -->

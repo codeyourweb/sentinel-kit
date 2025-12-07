@@ -12,12 +12,33 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
+/**
+ * Dashboard Controller provides metrics and statistics for the main dashboard.
+ * 
+ * This controller aggregates data from various sources including Elasticsearch,
+ * database entities, and services to provide comprehensive dashboard statistics.
+ * It handles metrics like event counts, trends, alert statistics, and rule status
+ * for the Sentinel Kit monitoring dashboard.
+ */
 #[Route('/api/dashboard')]
 class DashboardController extends AbstractController
 {
+    /**
+     * Entity manager for database operations.
+     */
     private EntityManagerInterface $entityManager;
+    
+    /**
+     * Elasticsearch service for event data retrieval.
+     */
     private ElasticsearchService $elasticsearchService;
 
+    /**
+     * Controller constructor with dependency injection.
+     * 
+     * @param EntityManagerInterface $entityManager Doctrine entity manager
+     * @param ElasticsearchService $elasticsearchService Elasticsearch service for log queries
+     */
     public function __construct(
         EntityManagerInterface $entityManager,
         ElasticsearchService $elasticsearchService
@@ -26,6 +47,27 @@ class DashboardController extends AbstractController
         $this->elasticsearchService = $elasticsearchService;
     }
 
+    /**
+     * Get comprehensive dashboard statistics and metrics.
+     * 
+     * Aggregates key performance indicators and statistics for the main
+     * dashboard including event counts, trends, alert metrics, and rule status.
+     * 
+     * @param Request $request HTTP request
+     * 
+     * @return JsonResponse Dashboard statistics or error message
+     * 
+     * Success response (200):
+     * {
+     *   "total_events_24h": number,
+     *   "events_trend": number (percentage change from previous 24h),
+     *   "active_alerts": {"total": number, "critical": number},
+     *   "detection_rules": {"total": number, "active": number, "enabled_percent": number},
+     *   "last_updated": string (ISO timestamp)
+     * }
+     * 
+     * Error response (500): {"error": "Failed to get dashboard stats: ..."}
+     */
     #[Route('/stats', name: 'app_dashboard_stats', methods: ['GET'])]
     public function getDashboardStats(Request $request): JsonResponse
     {
@@ -46,6 +88,14 @@ class DashboardController extends AbstractController
         }
     }
 
+    /**
+     * Get total number of events in the last 24 hours from Elasticsearch.
+     * 
+     * Queries Elasticsearch for the count of all events in sentinelkit indexes
+     * within the last 24-hour period.
+     * 
+     * @return int Total event count or 0 on error
+     */
     private function getTotalEvents24h(): int
     {
         try {
@@ -83,6 +133,14 @@ class DashboardController extends AbstractController
         }
     }
 
+    /**
+     * Calculate events trend percentage compared to previous period.
+     * 
+     * Compares the last 24 hours of events with the previous 24-hour period
+     * to calculate a percentage change trend.
+     * 
+     * @return int Percentage change (positive for increase, negative for decrease)
+     */
     private function getEventsTrend(): int
     {
         try {
@@ -137,6 +195,14 @@ class DashboardController extends AbstractController
         }
     }
 
+    /**
+     * Get count of active alerts in the last 24 hours.
+     * 
+     * Retrieves the total number of alerts and critical alerts generated
+     * in the last 24-hour period from the database.
+     * 
+     * @return array Array with 'total' and 'critical' alert counts
+     */
     private function getActiveAlertsCount(): array
     {
         $endTime = new \DateTime();
@@ -165,6 +231,14 @@ class DashboardController extends AbstractController
         ];
     }
 
+    /**
+     * Get statistics about detection rules.
+     * 
+     * Retrieves information about total and active Sigma rules,
+     * including the percentage of enabled rules.
+     * 
+     * @return array Array with 'total', 'active', and 'enabled_percent' values
+     */
     private function getDetectionRulesStats(): array
     {
         try {
@@ -202,6 +276,31 @@ class DashboardController extends AbstractController
         }
     }
 
+    /**
+     * Get recent alerts for dashboard display.
+     * 
+     * Retrieves the most recent security alerts from the last 24 hours
+     * for display on the dashboard. Supports configurable result limits.
+     * 
+     * @param Request $request HTTP request with optional query parameters
+     * 
+     * @return JsonResponse Recent alerts array or error message
+     * 
+     * Query parameters:
+     * - limit: Number of alerts to return (default: 5, min: 1, max: 50)
+     * 
+     * Success response (200):
+     * [
+     *   {
+     *     "id": number,
+     *     "title": string,
+     *     "description": string,
+     *     "severity": string,
+     *     "timestamp": string (ISO),
+     *     "rule_id": number
+     *   }
+     * ]
+     */
     #[Route('/recent-alerts', name: 'app_dashboard_recent_alerts', methods: ['GET'])]
     public function getRecentAlerts(Request $request): JsonResponse
     {

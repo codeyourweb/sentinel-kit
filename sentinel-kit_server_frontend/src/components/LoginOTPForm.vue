@@ -1,6 +1,40 @@
+<!--
+/**
+ * Login OTP Form Component - Two-Factor Authentication Step
+ * 
+ * This component handles the second step of authentication using TOTP
+ * (Time-based One-Time Password) codes from Google Authenticator or
+ * compatible authenticator apps.
+ * 
+ * Features:
+ * - 6-digit OTP input with automatic focus management
+ * - QR code display for first-time setup
+ * - Real-time validation and error feedback
+ * - Automatic submission when all digits entered
+ * - Keyboard navigation with backspace support
+ * - Visual error states for invalid codes
+ * 
+ * User Experience:
+ * - First-time users see QR code for app setup
+ * - Returning users only see OTP input fields
+ * - Automatic focus progression between input fields
+ * - Immediate feedback on invalid codes
+ * - Seamless integration with authentication flow
+ * 
+ * Security Features:
+ * - TOTP-based two-factor authentication
+ * - Time-limited codes for enhanced security
+ * - Secure session management
+ * - Protection against replay attacks
+ */
+-->
+
 <template>
+    <!-- OTP Authentication Form -->
     <form class="login-form max-w-md mx-auto mt-20 p-6 bg-white rounded-lg shadow-md">
         <h2 class="text-2xl font-bold mb-4">Enter OTP</h2>
+        
+        <!-- First-time Setup Instructions with QR Code -->
         <div class ="mb-4" v-if="otpKey != ''">
             <h2 class="text-lg font-semibold">First time login.</h2>
             <p>Scan the QR code below with your authenticator app and fulfill the 6-digit OTP.</p>
@@ -8,6 +42,8 @@
                 <img :src="otpKey" alt="OTP QR Code" class="object-center" />
             </div>
         </div>
+        
+        <!-- 6-Digit OTP Input Fields -->
         <div class="otp-inputs">
             <input type="text" id="otp0" class="input max-w-sm" :class="{ 'is-invalid': isInvalid }" maxlength="1" v-model="otp[0]" @input="focusNext(0)" @keydown.backspace="focusPrev(0)" />
             <input type="text" id="otp1" class="input max-w-sm" :class="{ 'is-invalid': isInvalid }" maxlength="1" v-model="otp[1]" @input="focusNext(1)" @keydown.backspace="focusPrev(1)" />
@@ -17,18 +53,30 @@
             <input type="text" id="otp5" class="input max-w-sm" :class="{ 'is-invalid': isInvalid }" maxlength="1" v-model="otp[5]" @input="handleSubmit" @keydown.backspace="focusPrev(5)" />
         </div>
     </form>
+    
+    <!-- Error Message Display -->
     <div v-if="isInvalid" class="text-red-600 mt-2">
         Invalid OTP. Please try again.
     </div>
 </template>
 
 <script setup>
+/**
+ * Login OTP Form Component Logic
+ * 
+ * Handles TOTP code input, validation, and submission for the second
+ * step of two-factor authentication.
+ */
 import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+
 const router = useRouter();
 
+// Component state
 const isInvalid = ref(false);
 const otp = ref(['', '', '', '', '', '']);
+
+// Component events and props
 const emit = defineEmits(['postauth-success', 'showNotification']);
 const props = defineProps({
     postAuthUrl: {
@@ -41,6 +89,14 @@ const props = defineProps({
     }
 });
 
+/**
+ * Handle focus progression to next input field
+ * 
+ * Automatically moves focus to the next OTP input field when
+ * current field is filled with a digit.
+ * 
+ * @param {number} index - Current input field index (0-5)
+ */
 const focusNext = (index) => {
     if (otp.value[index].length === 1 && index < 5) {
         const nextInput = document.querySelectorAll('.otp-inputs input')[index + 1];

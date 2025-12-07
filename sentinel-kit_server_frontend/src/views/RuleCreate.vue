@@ -1,4 +1,43 @@
+<!--
+/**
+ * Rule Create View - New Sigma Rule Creation Interface
+ * 
+ * This view provides a user-friendly interface for creating new Sigma detection
+ * rules with integrated YAML editing and real-time validation capabilities.
+ * 
+ * Features:
+ * - Monaco Editor integration with YAML syntax highlighting
+ * - Pre-loaded rule template with examples and guidelines
+ * - Real-time syntax validation with error reporting
+ * - Automatic rule structure validation
+ * - Save functionality with backend integration
+ * - Error handling and user feedback
+ * - Guided rule creation with documentation links
+ * 
+ * Rule Template:
+ * - Includes complete Sigma rule structure example
+ * - MITRE ATT&CK framework integration examples
+ * - Common field patterns and modifiers
+ * - Severity levels and detection logic examples
+ * - Best practices and documentation references
+ * 
+ * Validation:
+ * - YAML syntax checking
+ * - Sigma rule schema validation
+ * - Required field verification (title, description)
+ * - Error display with detailed feedback
+ * 
+ * Workflow:
+ * 1. User edits rule content in Monaco editor
+ * 2. Real-time syntax validation provides feedback
+ * 3. Save button triggers backend validation
+ * 4. Success redirects to rules list or edit view
+ * 5. Errors displayed with specific issue details
+ */
+-->
+
 <template>
+  <!-- Rule Creation Container -->
   <div class="flex flex-col h-screen">
     <div class="flex-shrink-0 p-4 border-b border-gray-200 flex justify-between items-center">
       <h1 class="text-4xl font-extrabold text-gray-900">New sigma rule</h1>
