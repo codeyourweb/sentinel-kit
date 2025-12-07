@@ -150,3 +150,4 @@ With data ingestion configured:
 ---
 
 *Next: [Sigma Rules Management →](04-sigma-rules.md)*
+<<[Back to index](index.md)

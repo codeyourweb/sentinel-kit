@@ -1,5 +1,5 @@
 ![Sentinel Kit](docs/img/sentinel-kit_logo.png)
-# 🛡️ Sentinel Kit: The Unified Security Platform for SOC & DFIR
+# 🛡️ Sentinel Kit: Unified security platform for SOC & DFIR
 
 **Sentinel Kit** is a comprehensive security platform designed to provide **Security Operations Center (SOC)** and **Digital Forensics and Incident Response (DFIR)** capabilities with unparalleled deployment simplicity.
 

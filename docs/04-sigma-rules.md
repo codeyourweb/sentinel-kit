@@ -113,8 +113,8 @@ With Sigma rules deployed:
 
 1. **[Monitor and Investigate Alerts](04-alert-management.md)** - Learn alert triage workflows
 2. **[Platform Health Monitoring](06-monitoring-health.md)** - Monitor rule performance
-3. **[Advanced Configuration](05-platform-configuration.md)** - Optimize rule engine settings
 
 ---
 
 *Next: [Alert Management & Investigation →](04-alert-management.md)*
+<<[Back to index](index.md)

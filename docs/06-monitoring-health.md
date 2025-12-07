@@ -84,3 +84,4 @@ You can import many additional dashboards from the official [Grafana website](ht
 ### Performance Consideration
 
 **Warning**: On systems with limited memory or CPU resources, it is recommended to avoid enabling the `internal-monitoring` profile to ensure optimal performance.
+<<[Back to index](index.md)

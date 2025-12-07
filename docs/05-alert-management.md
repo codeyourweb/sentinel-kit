@@ -387,3 +387,4 @@ AND NOT user.name:"system"
 ---
 
 *Next: [Monitoring & Health →](06-monitoring-health.md)*
+<<[Back to index](index.md)
