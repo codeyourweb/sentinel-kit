@@ -198,8 +198,8 @@ const menuItems = [
 { name: 'Rulesets', icon: 'icon-[carbon--rule-draft]', route: 'RulesList' },
 { name: 'Alerts', icon: 'icon-[solar--eye-scan-broken]', route: 'AlertsList' },
 { name: 'Logs', icon: 'icon-[icon-park-outline--log]', route: 'Kibana' },
-{ name: 'Endpoint detection', icon: 'icon-[line-md--computer-twotone]', route: 'Home' },
-{ name: 'Perf. monitoring', icon: 'icon-[material-symbols--monitor-heart-outline]', route: 'Grafana' }
+{ name: 'Perf. monitoring', icon: 'icon-[material-symbols--monitor-heart-outline]', route: 'Grafana' },
+{ name: 'Endpoint detection', icon: 'icon-[line-md--computer-twotone]', route: 'Assets' }
 ];
 </script>
 
