@@ -1,3 +1,4 @@
+
 *.lock
 /.env.local
 /.env.local.php
@@ -6,16 +7,22 @@
 /config/elastalert_ruleset/*
 /config/backend/*
 /data/caddy_logs/*
+!/data/caddy_logs/.gitkeep
 /data/ftp_data/*
+!/data/ftp_data/.gitkeep
 /data/grafana/*
 /data/kibana/*
+!/data/kibana/.gitkeep
 /data/rulesets/yara_ruleset/*
 /data/rulesets/sigma_ruleset/*
+!/data/rulesets/sigma_ruleset/.gitkeep
 /data/fluentbit_db/*
+!/data/fluentbit_db/.gitkeep
 /data/log_ingest_data/*/*
 !/data/log_ingest_data/*/.gitkeep
 /data/mysql_data/*
 /data/yara_triage_data/*
+!/data/yara_triage_data/.gitkeep
 /docs/graphs/*.bkp
 /sentinel-kit_server_frontend/node_modules/*
 /sentinel-kit_server_frontend/dist/*

@@ -1,7 +1,7 @@
 # Ingest Custom Sources into Sentinel-Kit Indexer
 
 **Sentinel-Kit** natively supports multiple direct log ingestion modes by placing log files in the subdirectories of `/data/log_ingest_data`.  
-It also includes an HTTP forwarder for JSON-formatted log ingestion — see the [Ingest logs](04-ingest-logs.md) section for details.  
+It also includes an HTTP forwarder for JSON-formatted log ingestion — see the [Data ingestion](02-data-ingestion.md) section for details.  
 
 However, for advanced use cases, you may want to create your own custom ingestion source.  
 Sentinel-Kit uses **Fluent Bit** as its log ingestion engine, which can be directly extended to handle additional sources.
@@ -88,7 +88,7 @@ docker compose restart sentinel-kit-server-fluentbit
 You can check Fluent Bit logs to confirm that your configuration is working correctly or to debug issues:
 
 ```bash
-docker logs -f sentinel-kit-server-fluentbit
+./launcher logs forwarder
 ```
 
 These logs will provide detailed information about configuration loading, parsing, and any encountered errors.

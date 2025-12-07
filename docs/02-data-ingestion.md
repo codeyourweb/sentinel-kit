@@ -1,3 +1,27 @@
+# 📊 Data Ingestion Setup
+
+This guide covers configuring log sources, setting up FluentBit collection, and monitoring data ingestion in Sentinel Kit.
+
+---
+
+## Understanding Data Flow
+
+Sentinel Kit uses **FluentBit** as the primary log collection engine, feeding data into **Elasticsearch** for storage and analysis:
+
+```
+Log Sources → FluentBit → Elasticsearch → Sentinel-Kit frontend and Kibana
+```
+
+### Supported Data Sources
+- **File-based logs** (Apache, Nginx, system logs)
+- **Syslog streams** (network devices, servers)
+- **HTTP endpoints** (webhook integration)
+- **Database logs** (MySQL, PostgreSQL)
+- **Windows Event Logs** (via agent or export)
+- **Custom JSON/CSV formats**
+
+---
+
 # 💻 Log Ingestion into Sentinel-Kit
 
 This document outlines the various methods available for ingesting logs into the Sentinel-Kit Elastic Stack.
@@ -28,7 +52,7 @@ By default, the stack is configured for rapid indexing of the following log type
 
 ### Accessing Indexed Data
 
-All indexed data is placed into Elasticsearch indices following the format: `ingest-<TYPE>-<YY>-<MM>-<DD>`.
+All indexed data is placed into Elasticsearch indices following the format: `sentinelkit-ingest-<TYPE>-<YY>-<MM>-<DD>`.
 
 You can access and visualize this data via Kibana:
 * **URL:** `https://kibana.sentinel-kit.local`
@@ -67,10 +91,10 @@ You can send logs, primarily in **JSON format**, using a dedicated forwarder. Th
 
 ### Step 1: Access the Backend Console
 
-Execute the following command to enter the backend container:
+Execute the following command to enter the backend console application:
 
 ```bash
-docker exec -it sentinel-kit-app-backend /bin/bash
+./launcher console
 ```
 
 
@@ -79,7 +103,7 @@ docker exec -it sentinel-kit-app-backend /bin/bash
 Once inside the container, run the following command to create a new ingestion endpoint:
 
 ```bash
-backend:/var/www/html# php bin/console app:datasource:create <name> <index> [<validFrom> [<validTo>]]
+sentinel-kit> app:datasource:create <name> <index> [<validFrom> [<validTo>]]
 ```
 
 This command takes 4 arguments:
@@ -90,7 +114,7 @@ This command takes 4 arguments:
 
 Example:
 ```bash
-backend:/var/www/html# php bin/console app:datasource:create MyIngestName temp_index 2020-01-01 2030-01-01
+sentinel-kit> app:datasource:create MyIngestName temp_index 2020-01-01 2030-01-01
 MyIngestName - temp_index
 [OK] Datasource "MyIngestName" created successfully 
 Valid from 2020-01-01
@@ -109,5 +133,20 @@ Once the source is created, logs must be sent to the Forwarder URL displayed in 
 ### ➕ Additional Console Commands
 
 Use these commands to manage your data sources:
-* List Sources: php bin/console `app:datasource:list`
-* Delete Source: php bin/console `app:datasource:delete <name>`
+* List Sources: `app:datasource:list`
+* Delete Source: `app:datasource:delete <name>`
+
+---
+
+## Next Steps
+
+With data ingestion configured:
+
+1. **[Avanced ingestion](03-ingest-custom-sources.md)** - Extend core capabilities with advanced logs ingestion
+1. **[Create Detection Rules](04-sigma-rules.md)** - Build Sigma rules for your data
+2. **[Investigate Alerts](05-alert-management.md)** - Learn alert analysis workflows
+3. **[Monitor Platform Health](06-monitoring-health.md)** - Set up monitoring alerts
+
+---
+
+*Next: [Sigma Rules Management →](04-sigma-rules.md)*
