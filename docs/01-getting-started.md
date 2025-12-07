@@ -70,7 +70,9 @@ ELASTICSEARCH_MEMORY_LIMIT=4294967296
 
 🌐 Domain Names
 The hostnames for the exposed services are customizable here. It is mandatory to map these hostnames to the stack's IP address either in your DNS configuration or in your local hosts file (for isolated local installations).
-| Service | Environment Variable | Default Hostname | 
+
+| Service | Environment Variable | Default Hostname |
+|-----------|---------|------------------| 
 | Frontend | SENTINELKIT_FRONTEND_HOSTNAME | sentinel-kit.local | 
 | Backend API | SENTINELKIT_BACKEND_HOSTNAME | backend.sentinel-kit.local | 
 | phpMyAdmin | SENTINELKIT_PMA_HOSTNAME | phpmyadmin.sentinel-kit.local | 
@@ -274,3 +276,4 @@ Now that your platform is running:
 ---
 
 *Next: [Data Ingestion Setup →](02-data-ingestion.md)*
+<<[Back to index](index.md)
