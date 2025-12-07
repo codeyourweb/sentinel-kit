@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("start", "stop", "build", "clean-data", "console", "logs", "status", "help")]
+    [ValidateSet("start", "stop", "build", "clean-data", "console", "logs", "status", "local-dns-install", "local-dns-uninstall", "help")]
     [string]$Command = "help",
     [string]$ServiceName = "",
     [switch]$Follow,
@@ -23,14 +23,16 @@ function Show-Help {
     Write-Host "  .\launcher.ps1 <command>" -ForegroundColor White
     Write-Host ""
     Write-Host "COMMANDS:" -ForegroundColor $InfoColor
-    Write-Host "  start       Start the Docker stack" -ForegroundColor White
-    Write-Host "  stop        Stop the running Docker stack" -ForegroundColor White  
-    Write-Host "  build       Build and start the Docker stack" -ForegroundColor White
-    Write-Host "  clean-data  Clean all user data and stop containers" -ForegroundColor White
-    Write-Host "  console     Access Sentinel-Kit console" -ForegroundColor White
-    Write-Host "  logs        Show Docker container logs" -ForegroundColor White
-    Write-Host "  status      Show container status" -ForegroundColor White
-    Write-Host "  help        Show this help message" -ForegroundColor White
+    Write-Host "  start               Start the Docker stack" -ForegroundColor White
+    Write-Host "  stop                Stop the running Docker stack" -ForegroundColor White  
+    Write-Host "  build               Build and start the Docker stack" -ForegroundColor White
+    Write-Host "  clean-data          Clean all user data and stop containers" -ForegroundColor White
+    Write-Host "  console             Access Sentinel-Kit console" -ForegroundColor White
+    Write-Host "  logs                Show Docker container logs" -ForegroundColor White
+    Write-Host "  status              Show container status" -ForegroundColor White
+    Write-Host "  local-dns-install   Install local DNS entries to hosts file" -ForegroundColor White
+    Write-Host "  local-dns-uninstall Remove local DNS entries from hosts file" -ForegroundColor White
+    Write-Host "  help                Show this help message" -ForegroundColor White
     Write-Host ""
     Write-Host "OPTIONS:" -ForegroundColor $InfoColor
     Write-Host "  -Follow     Follow log output (for logs command)" -ForegroundColor White
@@ -133,6 +135,145 @@ function Wait-ForHealthyServices {
     
     Write-Host "Timeout: Services did not become healthy within the expected time." -ForegroundColor $ErrorColor
     return $false
+}
+
+function Test-IsAdministrator {
+    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Get-HostsFilePath {
+    return "$env:SystemRoot\System32\drivers\etc\hosts"
+}
+
+function Test-HostsFileWritable {
+    $hostsFile = Get-HostsFilePath
+    try {
+        $testContent = Get-Content -Path $hostsFile -Raw -ErrorAction Stop
+        [System.IO.File]::WriteAllText($hostsFile, $testContent)
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Install-LocalDNSEntries {
+    Write-Host ""
+    Write-Host "========== INSTALLING LOCAL DNS ENTRIES ==========" -ForegroundColor $HeaderColor
+    
+    if (-not (Test-IsAdministrator)) {
+        Write-Host "Error: Administrator privileges are required to modify the hosts file." -ForegroundColor $ErrorColor
+        Write-Host "Please run this script as Administrator." -ForegroundColor $WarningColor
+        exit 1
+    }
+    
+    $hostsFile = Get-HostsFilePath
+    Write-Host "Using hosts file: $hostsFile" -ForegroundColor $InfoColor
+    
+    if (-not (Test-HostsFileWritable)) {
+        Write-Host "Error: Cannot write to hosts file. Check file permissions." -ForegroundColor $ErrorColor
+        exit 1
+    }
+    
+    $dnsEntries = @(
+        "127.0.0.1   sentinel-kit.local",
+        "127.0.0.1   backend.sentinel-kit.local", 
+        "127.0.0.1   phpmyadmin.sentinel-kit.local",
+        "127.0.0.1   kibana.sentinel-kit.local",
+        "127.0.0.1   grafana.sentinel-kit.local"
+    )
+    
+    try {
+        $hostsContent = Get-Content -Path $hostsFile -ErrorAction Stop
+        $modified = $false
+        $addedEntries = @()
+        
+        foreach ($entry in $dnsEntries) {
+            $domain = ($entry -split '\s+')[1]
+            $existingEntry = $hostsContent | Where-Object { $_ -match "^\s*127\.0\.0\.1\s+$([regex]::Escape($domain))\s*$" }
+            
+            if (-not $existingEntry) {
+                $hostsContent += $entry
+                $addedEntries += $entry
+                $modified = $true
+                Write-Host "  Added: $entry" -ForegroundColor $SuccessColor
+            } else {
+                Write-Host "  Already exists: $domain" -ForegroundColor $InfoColor
+            }
+        }
+        
+        if ($modified) {
+            $hostsContent | Out-File -FilePath $hostsFile -Encoding UTF8 -Force
+            Write-Host ""
+            Write-Host "Successfully added $($addedEntries.Count) DNS entries to hosts file." -ForegroundColor $SuccessColor
+        } else {
+            Write-Host ""
+            Write-Host "All DNS entries already exist in hosts file." -ForegroundColor $InfoColor
+        }
+        
+    } catch {
+        Write-Host "Error modifying hosts file: $($_.Exception.Message)" -ForegroundColor $ErrorColor
+        exit 1
+    }
+}
+
+function Uninstall-LocalDNSEntries {
+    Write-Host ""
+    Write-Host "========== REMOVING LOCAL DNS ENTRIES ==========" -ForegroundColor $HeaderColor
+    
+    if (-not (Test-IsAdministrator)) {
+        Write-Host "Error: Administrator privileges are required to modify the hosts file." -ForegroundColor $ErrorColor
+        Write-Host "Please run this script as Administrator." -ForegroundColor $WarningColor
+        exit 1
+    }
+    
+    $hostsFile = Get-HostsFilePath
+    Write-Host "Using hosts file: $hostsFile" -ForegroundColor $InfoColor
+    
+    if (-not (Test-HostsFileWritable)) {
+        Write-Host "Error: Cannot write to hosts file. Check file permissions." -ForegroundColor $ErrorColor
+        exit 1
+    }
+    
+    $domainsToRemove = @(
+        "sentinel-kit.local",
+        "backend.sentinel-kit.local", 
+        "phpmyadmin.sentinel-kit.local",
+        "kibana.sentinel-kit.local",
+        "grafana.sentinel-kit.local"
+    )
+    
+    try {
+        $hostsContent = Get-Content -Path $hostsFile -ErrorAction Stop
+        $originalCount = $hostsContent.Count
+        $removedEntries = @()
+        
+        foreach ($domain in $domainsToRemove) {
+            $beforeCount = $hostsContent.Count
+            $hostsContent = $hostsContent | Where-Object { $_ -notmatch "^\s*127\.0\.0\.1\s+$([regex]::Escape($domain))\s*$" }
+            
+            if ($hostsContent.Count -lt $beforeCount) {
+                $removedEntries += $domain
+                Write-Host "  Removed: $domain" -ForegroundColor $SuccessColor
+            } else {
+                Write-Host "  Not found: $domain" -ForegroundColor $InfoColor
+            }
+        }
+        
+        if ($removedEntries.Count -gt 0) {
+            $hostsContent | Out-File -FilePath $hostsFile -Encoding UTF8 -Force
+            Write-Host ""
+            Write-Host "Successfully removed $($removedEntries.Count) DNS entries from hosts file." -ForegroundColor $SuccessColor
+        } else {
+            Write-Host ""
+            Write-Host "No DNS entries were found to remove." -ForegroundColor $InfoColor
+        }
+        
+    } catch {
+        Write-Host "Error modifying hosts file: $($_.Exception.Message)" -ForegroundColor $ErrorColor
+        exit 1
+    }
 }
 
 if ($Help) {
@@ -481,6 +622,12 @@ switch ($Command.ToLower()) {
         } else {
             Write-Host "Operation cancelled." -ForegroundColor $InfoColor
         }
+    }
+    "local-dns-install" {
+        Install-LocalDNSEntries
+    }
+    "local-dns-uninstall" {
+        Uninstall-LocalDNSEntries
     }
     default { 
         Write-Host "Unknown command: $Command" -ForegroundColor $ErrorColor

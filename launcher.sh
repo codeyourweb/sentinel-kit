@@ -20,14 +20,16 @@ show_help() {
     echo -e "  ${WHITE_COLOR}./launcher.sh <command>${RESET_COLOR}"
     echo ""
     echo -e "${INFO_COLOR}COMMANDS:${RESET_COLOR}"
-    echo -e "  ${WHITE_COLOR}start       Start the Docker stack (using existing images)${RESET_COLOR}"
-    echo -e "  ${WHITE_COLOR}stop        Stop the running Docker stack${RESET_COLOR}"
-    echo -e "  ${WHITE_COLOR}build       Build and start the Docker stack (rebuild images)${RESET_COLOR}"
-    echo -e "  ${WHITE_COLOR}clean-data  Clean all user data and stop containers${RESET_COLOR}"
-    echo -e "  ${WHITE_COLOR}console     Access Sentinel-Kit console in backend container${RESET_COLOR}"
-    echo -e "  ${WHITE_COLOR}logs        Show Docker container logs${RESET_COLOR}"
-    echo -e "  ${WHITE_COLOR}status      Show container status information${RESET_COLOR}"
-    echo -e "  ${WHITE_COLOR}help        Show this help message${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}start               Start the Docker stack (using existing images)${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}stop                Stop the running Docker stack${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}build               Build and start the Docker stack (rebuild images)${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}clean-data          Clean all user data and stop containers${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}console             Access Sentinel-Kit console in backend container${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}logs                Show Docker container logs${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}status              Show container status information${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}local-dns-install   Install local DNS entries to hosts file${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}local-dns-uninstall Remove local DNS entries from hosts file${RESET_COLOR}"
+    echo -e "  ${WHITE_COLOR}help                Show this help message${RESET_COLOR}"
     echo ""
     echo -e "${INFO_COLOR}OPTIONS:${RESET_COLOR}"
     echo -e "  ${WHITE_COLOR}-h, --help  Show this help message${RESET_COLOR}"
@@ -141,6 +143,207 @@ wait_for_healthy_services() {
     
     echo -e "${ERROR_COLOR}Timeout: Services did not become healthy within the expected time.${RESET_COLOR}"
     return 1
+}
+
+test_is_root() {
+    if [ "$EUID" -eq 0 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+test_sudo_available() {
+    if command -v sudo >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+get_hosts_file_path() {
+    echo "/etc/hosts"
+}
+
+test_hosts_file_writable() {
+    local hosts_file
+    hosts_file=$(get_hosts_file_path)
+    
+    if test_is_root; then
+        if [ -w "$hosts_file" ]; then
+            return 0
+        else
+            return 1
+        fi
+    else
+        if test_sudo_available; then
+            if sudo -n true >/dev/null 2>&1; then
+                return 0
+            else
+                if echo "" | sudo -S true >/dev/null 2>&1; then
+                    return 0
+                else
+                    return 1
+                fi
+            fi
+        else
+            return 1
+        fi
+    fi
+}
+
+install_local_dns_entries() {
+    echo ""
+    echo -e "${HEADER_COLOR}========== INSTALLING LOCAL DNS ENTRIES ==========${RESET_COLOR}"
+    
+    local hosts_file
+    hosts_file=$(get_hosts_file_path)
+    echo -e "${INFO_COLOR}Using hosts file: $hosts_file${RESET_COLOR}"
+    
+    local dns_entries=(
+        "127.0.0.1   sentinel-kit.local"
+        "127.0.0.1   backend.sentinel-kit.local"
+        "127.0.0.1   phpmyadmin.sentinel-kit.local"
+        "127.0.0.1   kibana.sentinel-kit.local"
+        "127.0.0.1   grafana.sentinel-kit.local"
+    )
+    
+    local use_sudo=false
+    
+    if ! test_is_root; then
+        if test_sudo_available; then
+            echo -e "${WARNING_COLOR}Root privileges required. Will use sudo to modify hosts file.${RESET_COLOR}"
+            use_sudo=true
+        else
+            echo -e "${ERROR_COLOR}Error: Root privileges are required to modify the hosts file.${RESET_COLOR}"
+            echo -e "${WARNING_COLOR}Please run this script as root or ensure sudo is available.${RESET_COLOR}"
+            exit 1
+        fi
+    fi
+    
+    if ! test_hosts_file_writable; then
+        echo -e "${ERROR_COLOR}Error: Cannot write to hosts file. Check file permissions.${RESET_COLOR}"
+        exit 1
+    fi
+    
+    local temp_file
+    temp_file=$(mktemp)
+    local modified=false
+    local added_entries=()
+    
+    if [ "$use_sudo" = true ]; then
+        sudo cp "$hosts_file" "$temp_file"
+    else
+        cp "$hosts_file" "$temp_file"
+    fi
+    
+    for entry in "${dns_entries[@]}"; do
+        local domain=$(echo "$entry" | awk '{print $2}')
+        
+        if grep -q "^127\.0\.0\.1[[:space:]]\+$domain[[:space:]]*$" "$temp_file"; then
+            echo -e "  ${INFO_COLOR}Already exists: $domain${RESET_COLOR}"
+        else
+            echo "$entry" >> "$temp_file"
+            added_entries+=("$entry")
+            modified=true
+            echo -e "  ${SUCCESS_COLOR}Added: $entry${RESET_COLOR}"
+        fi
+    done
+    
+    if [ "$modified" = true ]; then
+        if [ "$use_sudo" = true ]; then
+            sudo cp "$temp_file" "$hosts_file"
+        else
+            cp "$temp_file" "$hosts_file"
+        fi
+        
+        echo ""
+        echo -e "${SUCCESS_COLOR}Successfully added ${#added_entries[@]} DNS entries to hosts file.${RESET_COLOR}"
+    else
+        echo ""
+        echo -e "${INFO_COLOR}All DNS entries already exist in hosts file.${RESET_COLOR}"
+    fi
+    
+    rm -f "$temp_file"
+}
+
+uninstall_local_dns_entries() {
+    echo ""
+    echo -e "${HEADER_COLOR}========== REMOVING LOCAL DNS ENTRIES ==========${RESET_COLOR}"
+    
+    local hosts_file
+    hosts_file=$(get_hosts_file_path)
+    echo -e "${INFO_COLOR}Using hosts file: $hosts_file${RESET_COLOR}"
+    
+    local domains_to_remove=(
+        "sentinel-kit.local"
+        "backend.sentinel-kit.local"
+        "phpmyadmin.sentinel-kit.local"
+        "kibana.sentinel-kit.local"
+        "grafana.sentinel-kit.local"
+    )
+    
+    local use_sudo=false
+    
+    if ! test_is_root; then
+        if test_sudo_available; then
+            echo -e "${WARNING_COLOR}Root privileges required. Will use sudo to modify hosts file.${RESET_COLOR}"
+            use_sudo=true
+        else
+            echo -e "${ERROR_COLOR}Error: Root privileges are required to modify the hosts file.${RESET_COLOR}"
+            echo -e "${WARNING_COLOR}Please run this script as root or ensure sudo is available.${RESET_COLOR}"
+            exit 1
+        fi
+    fi
+    
+    if ! test_hosts_file_writable; then
+        echo -e "${ERROR_COLOR}Error: Cannot write to hosts file. Check file permissions.${RESET_COLOR}"
+        exit 1
+    fi
+    
+    local temp_file
+    temp_file=$(mktemp)
+    local removed_entries=()
+    
+    if [ "$use_sudo" = true ]; then
+        sudo cp "$hosts_file" "$temp_file"
+    else
+        cp "$hosts_file" "$temp_file"
+    fi
+    
+    for domain in "${domains_to_remove[@]}"; do
+        local before_count
+        local after_count
+        
+        before_count=$(wc -l < "$temp_file")
+        
+        sed -i "/^127\.0\.0\.1[[:space:]]\+$domain[[:space:]]*$/d" "$temp_file"
+        
+        after_count=$(wc -l < "$temp_file")
+        
+        if [ "$after_count" -lt "$before_count" ]; then
+            removed_entries+=("$domain")
+            echo -e "  ${SUCCESS_COLOR}Removed: $domain${RESET_COLOR}"
+        else
+            echo -e "  ${INFO_COLOR}Not found: $domain${RESET_COLOR}"
+        fi
+    done
+    
+    if [ ${#removed_entries[@]} -gt 0 ]; then
+        if [ "$use_sudo" = true ]; then
+            sudo cp "$temp_file" "$hosts_file"
+        else
+            cp "$temp_file" "$hosts_file"
+        fi
+        
+        echo ""
+        echo -e "${SUCCESS_COLOR}Successfully removed ${#removed_entries[@]} DNS entries from hosts file.${RESET_COLOR}"
+    else
+        echo ""
+        echo -e "${INFO_COLOR}No DNS entries were found to remove.${RESET_COLOR}"
+    fi
+    
+    rm -f "$temp_file"
 }
 
 start_sentinel_kit() {
@@ -516,7 +719,7 @@ follow_logs="false"
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        "start"|"stop"|"build"|"clean-data"|"console"|"logs"|"status"|"help")
+        "start"|"stop"|"build"|"clean-data"|"console"|"logs"|"status"|"local-dns-install"|"local-dns-uninstall"|"help")
             command="$1"
             shift
             ;;
@@ -574,6 +777,12 @@ case "$command" in
         ;;
     "status")
         show_status
+        ;;
+    "local-dns-install")
+        install_local_dns_entries
+        ;;
+    "local-dns-uninstall")
+        uninstall_local_dns_entries
         ;;
     "help")
         show_help
